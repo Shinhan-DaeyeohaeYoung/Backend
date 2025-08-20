@@ -1,0 +1,11 @@
+rootProject.name = 'daeyeo-haeyoung'
+
+include 'daeyo-external-api'
+include 'daeyo-domain'
+include 'daeyo-domain:domain-rds'
+include 'daeyo-domain:domain-redis'
+include 'daeyo-domain:domain-service'
+include 'daeyeo-infra'
+include 'daeyo-infra'
+include 'daeyo-common'
+include 'daeyo-batch'

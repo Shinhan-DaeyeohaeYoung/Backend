@@ -1,0 +1,22 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.joeun'
+version = '0.0.1-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api project(':daeyo-domain:domain-rds')
+    api project(':daeyo-domain:domain-redis')
+
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+}
+
+test {
+    useJUnitPlatform()
+}
