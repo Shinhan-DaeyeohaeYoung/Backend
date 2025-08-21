@@ -6,7 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class DaeyoExternalApiApplication {
     public static void main(String[] args) {
-        System.setProperty("spring.config.location", "classpath:/domain-property/application-rds.yml,classpath:/domain-property/application-redis.yml,classpath:/");
+        System.setProperty("spring.config.location", "classpath:/application-rds.yml,classpath:/application-redis.yml" +
+                ",classpath:/application-infra.yml,classpath:/");
         SpringApplication.run(DaeyoExternalApiApplication.class, args);
     }
 }
