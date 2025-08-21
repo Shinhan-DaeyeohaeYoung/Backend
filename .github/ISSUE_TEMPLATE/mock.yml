@@ -1,0 +1,54 @@
+name: "🧰 Mock Server"
+description: "Mock 서버 작성 또는 수정"
+labels: ["mock", "backend"]
+body:
+  - type: textarea
+    attributes:
+      label: 📝 설명
+      description: |
+        어떤 목적의 mock 서버인지 설명해 주세요.
+      placeholder: |
+        예) 프론트엔드 개발을 위한 사용자 로그인 API Mock 서버를 작성합니다.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: ✅ 작업할 내용
+      description: |
+        할 일을 체크박스 형태로 작성해 주세요.
+      placeholder: |
+        - [ ] Mock 서버 구조 설계
+        - [ ] 필요한 엔드포인트 정의
+        - [ ] 응답 데이터 정의 및 구현
+        - [ ] 프론트엔드와 연동 테스트
+      value: |
+        - [ ] Mock 서버 구조 설계
+        - [ ] 필요한 엔드포인트 정의
+        - [ ] 응답 데이터 정의 및 구현
+        - [ ] 프론트엔드와 연동 테스트
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 🔧 사용 도구
+      description: |
+        어떤 도구를 사용할 계획인지 작성해 주세요. (예: MSW, json-server, MirageJS 등)
+      placeholder: |
+        예) json-server를 사용하여 RESTful mock API 구현
+
+  - type: textarea
+    attributes:
+      label: 🌐 엔드포인트 목록
+      description: |
+        작성하거나 수정할 API 엔드포인트 목록을 간략히 적어 주세요.
+      placeholder: |
+        예) GET /api/users
+            POST /api/login
+
+  - type: textarea
+    attributes:
+      label: 📌 참고 자료
+      description: |
+        참고한 문서나 링크가 있다면 작성해 주세요.

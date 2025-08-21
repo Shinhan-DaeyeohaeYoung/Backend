@@ -1,0 +1,22 @@
+name: "🛠️ Refactor"
+description: "코드 리팩토링"
+labels: ["refactor"]
+body:
+  - type: textarea
+    attributes:
+      label: 📝 설명
+      description: 리팩토링에 대한 설명을 작성해 주세요.
+      placeholder: 어떤 부분을 왜 리팩토링 하는지 자세히 적어주세요!
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ✅ 작업할 내용
+      description: 리팩토링 작업 내용을 체크박스 형태로 작성해주세요.
+      placeholder: 최대한 세분화 해서 적어주세요!
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 📌 참고 자료
+      description: 참고 자료가 있다면 작성해 주세요.
