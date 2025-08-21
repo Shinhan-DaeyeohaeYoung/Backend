@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  daeyo-mysql:
+    image: mysql:latest
+    container_name: daeyo-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PW}
+      MYSQL_DATABASE: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PW}
+      TZ: ${MYSQL_TZ}
+    command: [
+      "--character-set-server=utf8mb4",
+      "--secure-file-priv=/docker-entrypoint-initdb.d/dummy"
+    ]
+    volumes:
+      - ./mysql-init.d:/docker-entrypoint-initdb.d
+      - ./mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - daeyo-network
+
+  daeyo-adminer:
+    image: adminer:latest
+    container_name: daeyo-adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: daeyo-mysql
+    ports:
+      - "18080:8080"
+    networks:
+      - daeyo-network
+
+  daeyo-redis:
+    image: redis:latest
+    container_name: daeyo-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - daeyo-network
+
+networks:
+  daeyo-network:
+    driver: bridge

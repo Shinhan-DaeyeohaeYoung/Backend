@@ -1,0 +1,38 @@
+name: "🧪 Test"
+description: "테스트 코드 작성 또는 수정"
+labels: ["test"]
+body:
+  - type: textarea
+    attributes:
+      label: 📝 설명
+      description: 어떤 테스트를 작성하거나 수정할 예정인지 설명해 주세요.
+      placeholder: 예) 로그인 API의 성공/실패 케이스에 대한 테스트를 작성합니다.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: ✅ 작업할 내용
+      description: 할 일을 체크박스 형태로 작성해 주세요.
+      placeholder: |
+        - [ ] 테스트 대상 모듈/기능 정리
+        - [ ] 정상 동작 케이스 테스트 작성
+        - [ ] 예외/에러 케이스 테스트 작성
+        - [ ] 테스트 커버리지 확인
+      value: |
+        - [ ] 테스트 대상 모듈/기능 정리
+        - [ ] 정상 동작 케이스 테스트 작성
+        - [ ] 예외/에러 케이스 테스트 작성
+        - [ ] 테스트 커버리지 확인
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: 🧩 테스트 방식
+      description: |
+        어떤 방식으로 테스트를 할 예정인지 작성해 주세요.
+        (예: 유닛 테스트, 통합 테스트 등)
+      placeholder: 예) Jest를 활용한 유닛 테스트
+  - type: textarea
+    attributes:
+      label: 📌 참고 자료
+      description: 참고한 문서나 링크가 있다면 작성해 주세요.

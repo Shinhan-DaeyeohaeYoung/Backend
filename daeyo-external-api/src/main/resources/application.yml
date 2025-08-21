@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: daeyo-service
+
+server:
+  port: 8082
