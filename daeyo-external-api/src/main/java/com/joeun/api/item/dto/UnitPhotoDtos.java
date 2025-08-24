@@ -4,6 +4,7 @@ public final class UnitPhotoDtos {
 
     // 생성/교체 요청
     public record UpsertRequest(
+            Long id,
             String key,        // S3 key (필수)
             String mime,       // image/jpeg 등 (옵션)
             String hash,       // sha256... (옵션)

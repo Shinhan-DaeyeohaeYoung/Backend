@@ -53,10 +53,11 @@ public class AdminItemController {
 
     /** 관리자 상세 */
     @GetMapping("/{itemId}")
-    public Map<String, Object> adminDetail(@PathVariable Long itemId,
-                                           @PageableDefault(size = 50, sort = "id") Pageable pageable) {
-        return app.adminDetail(itemId, pageable);
+    public ItemDtos.ItemDetailResponse adminDetail(@PathVariable Long itemId,
+                                                   @PageableDefault(size = 50, sort = "id") Pageable pageable) {
+        return app.getItemDetail(itemId, pageable, true, true);
     }
+
 
     /** 유닛 일괄 등록 (Admin DTO 사용) */
     @PostMapping("/{itemId}/units")

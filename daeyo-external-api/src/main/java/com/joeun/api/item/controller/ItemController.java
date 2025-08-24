@@ -25,8 +25,9 @@ public class ItemController {
     }
 
     @GetMapping("/items/{itemId}")
-    public ItemDtos.ItemDetailResponse detail(@PathVariable Long itemId) {
-        return app.getForUser(itemId);
+    public ItemDtos.ItemDetailResponse userDetail(@PathVariable Long itemId,
+                                                  @PageableDefault(size = 50, sort = "id") Pageable pageable) {
+        return app.getItemDetail(itemId, pageable, true, true);
     }
 
     /** 유닛 단건 사진 조회 */
