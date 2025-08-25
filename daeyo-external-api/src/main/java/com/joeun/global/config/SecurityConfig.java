@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -50,6 +51,8 @@ public class SecurityConfig {
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
         .authorizeHttpRequests(auth -> auth
+            // 학교 조회
+            .requestMatchers(HttpMethod.GET, "/api/universities", "/api/universities/**").permitAll()
             // 회원가입 / 로그인 허용
             .requestMatchers("/api/users/**").permitAll()
 
