@@ -4,13 +4,12 @@ import com.joeun.api.rental.dto.RentalDtos;
 import com.joeun.api.rental.dto.RentalDtos.*;
 import com.joeun.api.security.TenantProvider;
 import com.joeun.domain.rental.entity.Rental;
-import com.joeun.domain.rental.service.RentalDomainService;
+import com.joeun.service.rental.RentalDomainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
-import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor

@@ -10,7 +10,7 @@ import com.joeun.domain.item.entity.IndividualItem;
 import com.joeun.domain.item.service.ItemDomainService;
 import com.joeun.domain.item.service.UnitPhotoDomainService;
 import com.joeun.domain.rental.entity.Rental;
-import com.joeun.domain.rental.service.RentalDomainService;
+import com.joeun.service.rental.RentalDomainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
