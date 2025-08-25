@@ -3,11 +3,13 @@ package com.joeun.domain.rental.repository;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.rental.entity.RentalStatus;
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
@@ -37,4 +39,10 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
                                        @Param("id") Long id);
     List<Rental> findByUnitIdInAndStatusIn(Collection<Long> unitIds,
                                            Collection<RentalStatus> statuses);
+
+    // Todo: @QueryHints 적용 시 MySQL에서 동작하지 않을 수 있음 -> DB 설정 조작 필요
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from Rental r where r.offerToken = :holdingId")
+    @QueryHints(@QueryHint(name = "jakarta.persistence.lock.timeout", value = "0"))
+    Optional<Rental> findByOfferTokenForUpdate(String holdingId);
 }

@@ -8,60 +8,87 @@ import com.joeun.domain.item.repository.ItemRepository;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.rental.entity.RentalStatus;
 import com.joeun.domain.rental.repository.RentalRepository;
+import com.joeun.domain.reservation.service.ReservationRedisService;
+import com.joeun.domain.reservation.vo.ReserveResult;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.reactive.TransactionSynchronization;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.time.ZoneOffset;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RentalDomainService {
 
     private final ItemRepository itemRepository;
     private final IndividualItemRepository unitRepository;
     private final RentalRepository rentalRepository;
+    private final ReservationRedisService reservationRedisService;
 
     /** 1) 예약 생성: IndividualItem → RESERVED, Rental(RESERVED) 생성 */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Long reserveUnit(Long u, Long o, Long userId, Long itemId, Long unitId, int ttlMinutes) {
-        Item item = itemRepository.findByIdAndUniversityIdAndOrganizationId(itemId, u, o)
-                .orElseThrow(() -> new NoSuchElementException("item not found"));
 
-        IndividualItem unit = unitRepository.lockByIdAndTenant(u, o, unitId)
+        IndividualItem unit = unitRepository.findByIdAndTenant(u, o, unitId)
                 .orElseThrow(() -> new NoSuchElementException("unit not found"));
 
-        if (!unit.getItem().getId().equals(item.getId()))
+        if (!unit.getItem().getId().equals(itemId))
             throw new IllegalStateException("unit not in this item");
 
         if (unit.getStatus() != IndividualItemStatus.AVAILABLE)
             throw new IllegalStateException("unit is not AVAILABLE");
 
-        // 유닛 상태: AVAILABLE → RESERVED
-        unit.changeStatus(IndividualItemStatus.RESERVED);
+        String offerToken = UUID.randomUUID().toString();
 
-        // rental 생성: RESERVED 상태로
-        var now = LocalDateTime.now();
-        var expires = now.plusMinutes(ttlMinutes);
+        try {
 
-        Rental rental = Rental.builder()
-                .universityId(u).organizationId(o)
-                .userId(userId)
-                .item(item)
-                .unit(unit)
-                .quantity(1)
-                .status(RentalStatus.RESERVED)
-                .reservedAt(now)
-                .reserveExpiresAt(expires)
-                .build();
+            ReserveResult result = reservationRedisService
+                    .doReserve(unitId, offerToken, ttlMinutes * 60);
 
-        return rentalRepository.save(rental).getId();
+            if (!result.ok()) {
+                throw new IllegalStateException("reserve failed: " + result.reason());
+            }
+
+            long expireEpoch = Long.parseLong(result.expireEpoch());
+            LocalDateTime expiresUtc = LocalDateTime.ofEpochSecond(expireEpoch, 0, ZoneOffset.UTC);
+
+            int updated = unitRepository.updateStatusIfAvailable(unitId,
+                    IndividualItemStatus.RESERVED, IndividualItemStatus.AVAILABLE);
+
+            if (updated != 1) {
+                throw new IllegalStateException("unit raced - not AVAILABLE");
+            }
+
+            Rental rental = Rental.builder()
+                    .universityId(u).organizationId(o)
+                    .userId(userId)
+                    .item(unit.getItem())
+                    .unit(unit)
+                    .quantity(1)
+                    .status(RentalStatus.RESERVED)
+                    .reservedAt(LocalDateTime.now())
+                    .reserveExpiresAt(expiresUtc)
+                    .offerToken(offerToken)
+                    .build();
+
+            return rentalRepository.save(rental).getId();
+        } catch (Exception e) {
+            try {
+                reservationRedisService.revertReserve(unitId, offerToken);
+            }
+            catch (Exception revertEx) {
+                log.error("failed to revert reservation in Redis", revertEx);
+            }
+            throw new RuntimeException(e);
+        }
     }
 
     /** 2) 내 ‘유효한’ 예약 목록(만료 전) */
@@ -94,9 +121,40 @@ public class RentalDomainService {
         var now = LocalDateTime.now();
         r.confirmRental(now, now.plusDays(days));
 
-        // ✅ 리포지토리/엔티티를 밖으로 노출하지 말고 스냅샷만 리턴
         return new Approved(r.getId(), r.getStatus(), r.getDueAt());
     }
+
+    @Transactional
+    public void onHoldExpired(String holdingId) {
+
+        try {
+            Rental rental = rentalRepository.findByOfferTokenForUpdate(holdingId).orElse(null);
+            if (rental == null) return;                    // 이미 정리된 케이스
+
+            if (rental.getStatus() != RentalStatus.RESERVED) return;
+
+            if (rental.getReserveExpiresAt().isAfter(Instant.now().atOffset(ZoneOffset.UTC).toLocalDateTime())) {
+                return;
+            }
+
+            rental.expired();
+            IndividualItem unit = rental.getUnit();
+
+            if (unit.getStatus() == IndividualItemStatus.RESERVED) {
+                unit.changeStatus(IndividualItemStatus.AVAILABLE);
+            }
+
+            Long unitId = unit.getId();
+
+            reservationRedisService.cleanupReserve(unitId, holdingId);
+
+        } catch (Exception e) {
+            log.error("onHoldExpired error: holdingId={}", holdingId, e);
+        }
+    }
+
+
+
     /** 승인 결과 스냅샷 */
     public record Approved(Long id, RentalStatus status, LocalDateTime dueAt) {}
 
