@@ -83,6 +83,9 @@ public class Rental {
     @Column(name = "deposit_id")
     private Long depositId;
 
+    @Column(name = "offer_token", length = 64)
+    private String offerToken;
+
     /* ========= 도메인 메서드 ========= */
 
     /** 대여 시작 */
@@ -103,4 +106,9 @@ public class Rental {
         // this.reserveExpiresAt = null;
     }
     public void cancelReservation() { this.status = RentalStatus.CANCELLED; }
+
+    public void expired() {
+        this.status = RentalStatus.EXPIRED;
+        this.reserveExpiresAt = LocalDateTime.now();
+    }
 }
