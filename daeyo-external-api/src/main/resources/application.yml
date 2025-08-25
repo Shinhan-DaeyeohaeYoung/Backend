@@ -1,7 +1,15 @@
 spring:
   application:
     name: daeyo-service
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
 
+qr:
+  scan-url: "http://localhost:5173/scan"     # 스캔 후 프론트 라우트
+  ttl-default-seconds: 50                    # 기본 유효시간(초)
+  jwt:
+    secret:
+    
 server:
   port: 8082
 
