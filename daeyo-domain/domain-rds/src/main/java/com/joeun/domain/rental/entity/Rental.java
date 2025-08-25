@@ -106,4 +106,9 @@ public class Rental {
         // this.reserveExpiresAt = null;
     }
     public void cancelReservation() { this.status = RentalStatus.CANCELLED; }
+
+    public void expired() {
+        this.status = RentalStatus.EXPIRED;
+        this.reserveExpiresAt = LocalDateTime.now();
+    }
 }

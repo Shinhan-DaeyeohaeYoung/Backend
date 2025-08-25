@@ -16,7 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.reactive.TransactionSynchronization;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
@@ -123,9 +125,36 @@ public class RentalDomainService {
         return new Approved(r.getId(), r.getStatus(), r.getDueAt());
     }
 
+    @Transactional
     public void onHoldExpired(String holdingId) {
 
+        try {
+            Rental rental = rentalRepository.findByOfferTokenForUpdate(holdingId).orElse(null);
+            if (rental == null) return;                    // 이미 정리된 케이스
+
+            if (rental.getStatus() != RentalStatus.RESERVED) return;
+
+            if (rental.getReserveExpiresAt().isAfter(Instant.now().atOffset(ZoneOffset.UTC).toLocalDateTime())) {
+                return;
+            }
+
+            rental.expired();
+            IndividualItem unit = rental.getUnit();
+
+            if (unit.getStatus() == IndividualItemStatus.RESERVED) {
+                unit.changeStatus(IndividualItemStatus.AVAILABLE);
+            }
+
+            Long unitId = unit.getId();
+
+            reservationRedisService.cleanupReserve(unitId, holdingId);
+
+        } catch (Exception e) {
+            log.error("onHoldExpired error: holdingId={}", holdingId, e);
+        }
     }
+
+
 
     /** 승인 결과 스냅샷 */
     public record Approved(Long id, RentalStatus status, LocalDateTime dueAt) {}
