@@ -2,6 +2,8 @@ package com.joeun.domain.users.entity;
 
 import com.joeun.domain.university.entity.University;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
@@ -20,7 +22,9 @@ import java.util.List;
     }
 )
 @Data
+@Builder
 @NoArgsConstructor
+@AllArgsConstructor
 public class User {
 
   /* ===== 기본 컬럼 ===== */
