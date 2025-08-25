@@ -3,6 +3,7 @@ package com.joeun.api.user.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -32,4 +33,20 @@ public class UserSignupRequest {
   @NotBlank(message = "비밀번호는 필수 입력값입니다.")
   @Size(min = 8, max = 64, message = "비밀번호는 최소 8자 이상이어야 합니다.")
   private String password;
+
+  // ---- 계좌 입력 ----
+  @NotBlank
+  private String bankCode;           // 예: "088"
+
+  @Size(max = 64)
+  private String bankName;           // 옵션
+
+  @NotBlank
+  private String accountHolderName;
+
+  @NotBlank
+  @Pattern(regexp = "^[0-9]{6,30}$", message = "계좌번호는 숫자만 6~30자리로 입력")
+  private String accountNo;
+
+  private Boolean primary;           // null 이면 기본값 처리
 }
