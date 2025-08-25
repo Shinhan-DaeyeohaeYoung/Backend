@@ -1,4 +1,4 @@
-package com.joeun.domain.rental.service;
+package com.joeun.service.rental;
 
 import com.joeun.domain.item.entity.IndividualItem;
 import com.joeun.domain.item.entity.IndividualItemStatus;
