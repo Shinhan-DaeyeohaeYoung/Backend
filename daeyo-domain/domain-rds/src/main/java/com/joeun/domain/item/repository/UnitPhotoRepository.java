@@ -62,4 +62,5 @@ public interface UnitPhotoRepository extends JpaRepository<UnitPhoto, Long> {
     """)
     Optional<UnitPhoto> findByAssetNo(@Param("u") Long u, @Param("o") Long o,
                                       @Param("itemId") Long itemId, @Param("assetNo") String assetNo);
+
 }
