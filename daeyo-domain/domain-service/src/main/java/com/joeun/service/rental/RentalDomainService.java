@@ -121,7 +121,6 @@ public class RentalDomainService {
         var now = LocalDateTime.now();
         r.confirmRental(now, now.plusDays(days));
 
-        // ✅ 리포지토리/엔티티를 밖으로 노출하지 말고 스냅샷만 리턴
         return new Approved(r.getId(), r.getStatus(), r.getDueAt());
     }
 

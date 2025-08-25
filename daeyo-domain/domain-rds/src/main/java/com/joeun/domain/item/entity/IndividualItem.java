@@ -47,5 +47,7 @@ public class IndividualItem {
     public void changeStatus(IndividualItemStatus newStatus) {
         this.status = newStatus;
     }
+    public void markAvailable() { this.status = IndividualItemStatus.AVAILABLE; }
+
 }
 
