@@ -1,6 +1,23 @@
 package com.joeun.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.joeun.api.user.dto.UserSigninResponse;
+import com.joeun.api.user.service.UserService;
+import com.joeun.global.util.JwtAuthFilter;
+import com.joeun.global.util.JwtUtil;
+import jakarta.servlet.http.HttpServletResponse;
+import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseCookie;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -11,10 +28,16 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+  private final JwtAuthFilter jwtAuthFilter;
 
   @Bean
   public SecurityFilterChain filterChain(
@@ -27,7 +50,7 @@ public class SecurityConfig {
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
         .authorizeHttpRequests(auth -> auth
-            // 회원가입 허용
+            // 회원가입 / 로그인 허용
             .requestMatchers("/api/users/**").permitAll()
 
             // 나머지는 필요시 인증
@@ -39,6 +62,8 @@ public class SecurityConfig {
 
         // (임시) httpBasic는 유지하거나 필요 없으면 disable도 가능
         .httpBasic(Customizer.withDefaults());
+
+    http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
   }
