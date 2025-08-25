@@ -17,7 +17,7 @@ public class ExpireEventListener implements MessageListener {
 
     @Override
     public void onMessage(Message message, byte[] pattern) {
-        String expiredKey = message.toString(); // 메시지 = 만료된 키 이름
+        String expiredKey = message.toString();
         try {
             if (expiredKey.startsWith(HOLD_PREFIX)) {
                 String holdingId = expiredKey.substring(HOLD_PREFIX.length());

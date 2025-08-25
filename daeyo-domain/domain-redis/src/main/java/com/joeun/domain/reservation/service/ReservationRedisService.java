@@ -67,4 +67,17 @@ public class ReservationRedisService {
         String[] args = { holdingId };
         stringRedisTemplate.execute(revertHoldingScript, keys, args);
     }
+
+    public void cleanupReserve(Long unitId, String holdingId) {
+        String activeKey = "active:unit:" + unitId;
+        String holdKey   = "hold:" + holdingId;
+
+        String cur = stringRedisTemplate.opsForValue().get(activeKey);
+        if (holdingId.equals(cur)) {
+            stringRedisTemplate.delete(activeKey);
+        }
+        stringRedisTemplate.delete(holdKey);
+        stringRedisTemplate.opsForZSet().remove("hold:expirations", holdingId);
+    }
+
 }
