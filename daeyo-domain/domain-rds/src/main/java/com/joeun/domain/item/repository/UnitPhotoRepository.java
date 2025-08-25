@@ -9,7 +9,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UnitPhotoRepository extends JpaRepository<UnitPhoto, Long> {
+    // 개별상품(Unit) PK로 조회: unit.id 경로는 _Id 로 표현
+    Optional<UnitPhoto> findByUnit_Id(Long unitId);
 
+    // 멀티테넌트 안전장치(권장)
+    Optional<UnitPhoto> findByUnit_IdAndUniversityIdAndOrganizationId(
+            Long unitId, Long universityId, Long organizationId
+    );
     // 아이템 기준 대표 사진 1장: takenAt DESC, id DESC 로 가장 최신
     Optional<UnitPhoto> findTopByUniversityIdAndOrganizationIdAndUnit_Item_IdOrderByTakenAtDescIdDesc(
             Long universityId, Long organizationId, Long itemId
