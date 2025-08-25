@@ -4,3 +4,14 @@ spring:
 
 server:
   port: 8082
+
+app:
+  cookie:
+    secure: false     # 로컬 HTTP: false / 운영 HTTPS: true
+    same-site: Lax    # 운영에서 크로스 도메인이면 None (+ secure:true 필수)
+    domain: ""        # 필요 시 .example.com
+
+jwt:
+  secret: "${JWT_SECRET:change-this-to-32+chars-secret-key-change-this}"
+  access-token-validity-seconds: 3600
+  refresh-token-validity-seconds: 1209600
