@@ -18,6 +18,8 @@ dependencies {
 
     // Spring Data JPA
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // Password Encoder
+    implementation 'org.springframework.security:spring-security-crypto'
 
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
