@@ -5,6 +5,7 @@ import com.joeun.api.item.dto.PageResponse;
 import com.joeun.api.item.dto.UnitPhotoDtos;
 import com.joeun.api.item.service.ItemApplicationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -62,6 +63,7 @@ public class ItemController {
     })
     @GetMapping("/items")
     public PageResponse<ItemDtos.ItemSummaryResponse> list(
+            @Parameter(hidden = true)
             @PageableDefault(size = 20, sort = "id") Pageable pageable) {
         return PageResponse.from(app.listForUser(pageable));
     }
@@ -108,7 +110,9 @@ public class ItemController {
             @ApiResponse(responseCode = "404", description = "아이템 없음")
     })
     @GetMapping("/items/{itemId}")
-    public ItemDtos.ItemDetailResponse userDetail(@PathVariable Long itemId,
+    public ItemDtos.ItemDetailResponse userDetail(
+            @PathVariable Long itemId,
+            @Parameter(hidden = true)
                                                   @PageableDefault(size = 50, sort = "id") Pageable pageable) {
         return app.getItemDetail(itemId, pageable, true, true);
     }
@@ -141,7 +145,7 @@ public class ItemController {
     })
     @GetMapping("/items/{itemId}/units/{assetNo}/photo")
     public UnitPhotoDtos.DetailResponse unitPhoto(@PathVariable Long itemId,
-                                                  @PathVariable String assetNo) {
+                                                  @PathVariable String assetNo ) {
         return app.getUnitPhoto(itemId, assetNo);
     }
 }

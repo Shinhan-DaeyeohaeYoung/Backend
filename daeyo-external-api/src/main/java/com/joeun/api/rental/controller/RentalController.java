@@ -5,6 +5,7 @@ import com.joeun.api.rental.dto.RentalDtos;
 import com.joeun.api.rental.dto.RentalDtos.*;
 import com.joeun.api.rental.service.RentalApplicationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -98,6 +99,7 @@ public class RentalController {
     })
     @GetMapping("/rental-requests")
     public PageResponse<ReservationSummary> myReservations(
+            @Parameter(hidden = true)
             @PageableDefault(size = 20, sort = "reservedAt") Pageable pageable) {
         Long userId = 1L;
         return PageResponse.from(app.listMyReservations(userId, pageable));
