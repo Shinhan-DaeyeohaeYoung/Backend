@@ -348,3 +348,4 @@ fabric.properties
 # End of https://www.toptal.com/developers/gitignore/api/intellij,java,gradle,windows,macos
 
 scripts/mysql-data
+daeyo-infra/src/main/resources/firebase
