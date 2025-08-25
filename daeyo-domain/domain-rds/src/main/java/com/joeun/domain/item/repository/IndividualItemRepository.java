@@ -5,6 +5,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -33,4 +34,21 @@ public interface IndividualItemRepository extends  JpaRepository<IndividualItem,
     Optional<IndividualItem> lockByIdAndTenant(@Param("u") Long universityId,
                                                @Param("o") Long organizationId,
                                                @Param("unitId") Long unitId);
+
+    @Query("""
+      select u from IndividualItem u
+      where u.id = :unitId
+        and u.item.universityId = :u
+        and u.item.organizationId = :o
+      """)
+    Optional<IndividualItem> findByIdAndTenant(Long u, Long o, Long unitId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+      update IndividualItem i
+         set i.status = :toStatus
+       where i.id = :unitId
+         and i.status = :fromStatus
+    """)
+    int updateStatusIfAvailable(Long unitId, IndividualItemStatus individualItemStatus, IndividualItemStatus individualItemStatus1);
 }
