@@ -1,6 +1,8 @@
 package com.joeun.api.user.service;
 
 import com.joeun.api.exception.UnauthorizedException;
+import com.joeun.api.user.dto.UserBankAccountCreateRequest;
+import com.joeun.api.user.dto.UserBankAccountCreateResponse;
 import com.joeun.api.user.dto.UserBankAccountResponse;
 import com.joeun.api.user.dto.UserSigninRequest;
 import com.joeun.api.user.dto.UserSigninResponse;
@@ -76,5 +78,33 @@ public class UserService {
     return userDomainService.listBankAccounts(id).stream()
         .map(UserBankAccountResponse::from)
         .toList();
+  }
+
+  public UserBankAccountCreateResponse addMyBankAccount(Long userId, UserBankAccountCreateRequest req) {
+    User user = userDomainService.findById(userId)
+        .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+    // 방어적 정규화
+    String digits = req.getAccountNo().replaceAll("\\D", "");
+    String masked = accountCipher.mask(digits);
+    byte[] encrypted = accountCipher.encrypt(digits);
+
+    // 요구사항: 본 API에서는 대표계좌로 만들지 않음 → 항상 false
+    var saved = userDomainService.addBankAccountPrepared(
+        user,
+        req.getBankCode(),
+        req.getBankName(),
+        req.getAccountHolderName(),
+        masked,
+        encrypted,
+        false
+    );
+
+    return new UserBankAccountCreateResponse(
+        saved.getId(),
+        saved.getAccountNoMasked(),
+        saved.isPrimary(),
+        saved.isVerified()
+    );
   }
 }

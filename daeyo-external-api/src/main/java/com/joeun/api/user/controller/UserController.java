@@ -1,5 +1,7 @@
 package com.joeun.api.user.controller;
 
+import com.joeun.api.user.dto.UserBankAccountCreateRequest;
+import com.joeun.api.user.dto.UserBankAccountCreateResponse;
 import com.joeun.api.user.dto.UserBankAccountResponse;
 import com.joeun.api.user.dto.UserMeResponse;
 import com.joeun.api.user.dto.UserSigninRequest;
@@ -13,6 +15,7 @@ import java.time.Duration;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -78,5 +81,14 @@ public class UserController {
       @AuthenticationPrincipal LoginUser user
   ) {
     return ResponseEntity.ok(userService.listMyBankAccounts(user.id()));
+  }
+
+  @PostMapping("/me/bank-accounts")
+  public ResponseEntity<UserBankAccountCreateResponse> addMyBankAccount(
+      @AuthenticationPrincipal LoginUser loginUser,
+      @Valid @RequestBody UserBankAccountCreateRequest req
+  ) {
+    var body = userService.addMyBankAccount(loginUser.id(), req);
+    return ResponseEntity.status(HttpStatus.CREATED).body(body);
   }
 }
