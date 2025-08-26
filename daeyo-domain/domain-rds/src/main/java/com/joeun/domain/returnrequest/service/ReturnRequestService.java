@@ -3,6 +3,7 @@ package com.joeun.domain.returnrequest.service;
 import com.joeun.domain.item.repository.IndividualItemRepository;
 import com.joeun.domain.item.repository.UnitPhotoRepository;
 import com.joeun.domain.rental.entity.Rental;
+import com.joeun.domain.rental.entity.RentalStatus;
 import com.joeun.domain.rental.repository.RentalRepository;
 import com.joeun.domain.returnrequest.entity.ReturnRequest;
 import com.joeun.domain.returnrequest.entity.ReturnRequestStatus;
@@ -102,6 +103,8 @@ public class ReturnRequestService {
         // 2) 승인 처리
         rr.approve(approverUserId, LocalDateTime.now());
 
+        this.markRentalReturnedByReturnApproval(u, o, rr.getRental().getId(), approverUserId);
+
         // 3) 개별 상품 AVAILABLE 처리
         Long unitId = rr.getRental().getUnit().getId();
         var unit = individualItemRepository.findById(unitId)
@@ -126,7 +129,25 @@ public class ReturnRequestService {
         rr.cancelByUser(actorUserId);
         return rr;
     }
+    @Transactional(rollbackFor = Exception.class)
+    public void markRentalReturnedByReturnApproval(Long u, Long o, Long rentalId, Long approverUserId) {
+        var now = LocalDateTime.now();
 
+        // RENTAL만 잠그고 상태 전이 — unit 건드리지 않음
+        Rental r = rentalRepository.lockByIdAndTenant(u, o, rentalId)
+                .orElseThrow(() -> new NoSuchElementException("rental not found"));
+
+        // 정책: RENTED → RETURNED 만 허용 (이미 RETURNED면 무시)
+        if (r.getStatus() == RentalStatus.RETURNED) {
+            return; // idempotent
+        }
+        if (r.getStatus() != RentalStatus.RENTED) {
+            throw new IllegalStateException("rental is not RENTED");
+        }
+
+        r.markReturned(now);
+
+    }
 
     // 조직 ID를 모르는 유저 취소 케이스용(테넌트 테이블 구조에 맞춰 수정 가능)
     private Long getOrgIdOrZero() { return 0L; }
@@ -160,13 +181,4 @@ public class ReturnRequestService {
                 .map(UnitPhoto::getImageKey)
                 .orElse(null);
     }
-
-
-//    /* ======= 결과 DTO (손상률) ======= */
-//    public record DamageSuggestionResult(
-//            double damageRate,              // 0.0 ~ 1.0
-//            String summary,                 // 한 줄 요약
-//            String[] notes,                 // 세부 참고사항
-//            String suggestedCompensation    // 배상/정책 안내 제안
-//    ) {}
 }
