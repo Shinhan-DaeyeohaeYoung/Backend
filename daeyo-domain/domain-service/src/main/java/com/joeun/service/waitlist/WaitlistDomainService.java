@@ -1,8 +1,11 @@
 package com.joeun.service.waitlist;
 
+import com.joeun.domain.notification.entity.NotiType;
 import com.joeun.domain.waitlist.entity.Waitlist;
 import com.joeun.domain.waitlist.service.WaitlistRdsService;
+import com.joeun.global.dto.NotificationRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -13,6 +16,7 @@ import java.util.Optional;
 public class WaitlistDomainService {
 
     private final WaitlistRdsService waitlistRdsService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public void joinWaitlist(Waitlist waitlist) {
         waitlistRdsService.joinWaitlist(waitlist);
@@ -25,9 +29,13 @@ public class WaitlistDomainService {
     public void markNotified(Long id, LocalDateTime now) {
         Optional<Waitlist> waitlistOpt = waitlistRdsService.getNextOutstandingWaitlist(id);
         waitlistOpt.ifPresent(waitlist -> {
-            // Assuming Waitlist has a method to update its status and notifiedAt
             waitlist.markNotified(now);
-            waitlistRdsService.joinWaitlist(waitlist); // Save the updated waitlist
+            waitlistRdsService.joinWaitlist(waitlist);
+            eventPublisher.publishEvent(
+                    NotificationRequest.builder()
+                            .notiType(NotiType.WAITING_LIST_ESCAPE)
+                            .userId(waitlist.getUser().getId())
+                            .build());
         });
     }
 }
