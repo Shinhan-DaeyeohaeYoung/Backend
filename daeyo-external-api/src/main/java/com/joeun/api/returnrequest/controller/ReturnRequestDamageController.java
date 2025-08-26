@@ -7,11 +7,13 @@ import com.joeun.global.file.FileUrlResolver;
 
 import com.joeun.service.returnrequest.ReturnRequestQueryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/api")
 public class ReturnRequestDamageController {
 
     private final ReturnRequestQueryService queryService;

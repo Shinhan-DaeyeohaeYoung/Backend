@@ -26,22 +26,47 @@ public class DamageAssessmentService {
         String base64 = Base64.getEncoder().encodeToString(bytes);
         return "data:" + mimeType + ";base64," + base64;
     }
+
     public DamageSuggestionResult assess(String beforeUrl, String afterUrl) {
         // 1) mock URL이면 파일을 읽어 base64로
         String beforeImg = toDataUrl(readBytes(beforeUrl), "image/jpeg");
         String afterImg = toDataUrl(readBytes(afterUrl), "image/jpeg");
 
         // 2) Responses API 페이로드 구성 (이미지 2장 + 안내 텍스트)
+        // 2) Responses API 페이로드 구성 (이미지 2장 + JSON 스키마 응답 강제)
         Map<String, Object> body = Map.of(
-                "model", "gpt-4.1-mini", // 사용 모델
+                "model", "gpt-4.1-mini",
                 "input", List.of(Map.of(
                         "role", "user",
                         "content", List.of(
-                                Map.of("type", "input_text", "text", "두 이미지(수거 전/후)를 비교해서 파손 가능성과 파손률을 설명하고, 보수/청소/부품교체 중 무엇이 필요한지 제안해줘."),
+                                Map.of("type", "input_text", "text",
+                                        "두 이미지(수거 전/후)를 비교해 아래 형식의 JSON만 출력해.\n" +
+                                                "설명은 한국어로. 파손율은 0~100 사이 숫자(소수 허용).\n" +
+                                                "{ \"detail\": \"상세 설명\", \"damageRate\": number, \"summary\": \"요약\" }"
+                                ),
                                 Map.of("type", "input_image", "image_url", beforeImg),
                                 Map.of("type", "input_image", "image_url", afterImg)
                         )
-                ))
+                )),
+                "text", Map.of(
+                        "format", Map.of(
+                                "type", "json_schema",
+                                "name", "DamageSummary",
+                                "strict", true,
+                                "schema", Map.of(
+                                        "type", "object",
+                                        "additionalProperties", false,
+                                        "required", List.of("detail", "damageRate", "summary"),
+                                        "properties", Map.of(
+                                                "detail", Map.of("type", "string", "maxLength", 300, "description", "상세 설명"),
+                                                "damageRate", Map.of("type", "number", "minimum", 0, "maximum", 100, "description", "0~100"),
+                                                "summary", Map.of("type", "string", "maxLength", 150, "description", "한 줄 요약")
+                                        )
+                                )
+                        )
+                ),
+                "temperature", 0.2,
+                "max_output_tokens", 400
         );
 
         String respJson = openai.post()
@@ -93,26 +118,70 @@ public class DamageAssessmentService {
         }
     }
 
+    // 파서 교체 (output_json 우선, 그 외 텍스트 JSON도 처리)
     private DamageSuggestionResult parse(String respJson) {
         try {
             JsonNode root = mapper.readTree(respJson);
-
-            String text = "";
-            if (root.has("output") && root.get("output").isArray()) {
-                JsonNode outputArr = root.get("output");
-                if (!outputArr.isEmpty()) {
-                    JsonNode contentArr = outputArr.get(0).path("content");
-                    if (contentArr.isArray() && !contentArr.isEmpty()) {
-                        text = contentArr.get(0).path("text").asText("");
+            JsonNode output = root.path("output");
+            if (output.isArray() && output.size() > 0) {
+                JsonNode content = output.get(0).path("content");
+                if (content.isArray()) {
+                    // 1) output_json 우선
+                    for (JsonNode c : content) {
+                        if ("output_json".equals(c.path("type").asText("")) && c.has("json")) {
+                            return toResult(c.get("json"));
+                        }
+                    }
+                    // 2) 텍스트가 JSON 문자열이면 파싱
+                    for (JsonNode c : content) {
+                        String txt = c.path("text").asText("");
+                        if (!txt.isBlank()) {
+                            try {
+                                JsonNode maybe = mapper.readTree(txt);
+                                if (maybe.isObject()) return toResult(maybe);
+                            } catch (Exception ignore) { /* not json */ }
+                            // 3) 텍스트를 그대로 detail/summary로
+                            return new DamageSuggestionResult(txt, 0.0, txt);
+                        }
                     }
                 }
             }
-
-            return new DamageSuggestionResult(text);
-
+            // 4) 상단 편의 필드
+            String outputText = root.path("output_text").asText("");
+            if (!outputText.isBlank()) {
+                try {
+                    JsonNode maybe = mapper.readTree(outputText);
+                    if (maybe.isObject()) return toResult(maybe);
+                } catch (Exception ignore) { /* not json */ }
+                return new DamageSuggestionResult(outputText, 0.0, outputText);
+            }
+            // 5) 최후 수단
+            return new DamageSuggestionResult("", 0.0, "");
         } catch (Exception e) {
-            throw new RuntimeException("Failed to parse OpenAI response: " + respJson, e);
+            return new DamageSuggestionResult("", 0.0, "");
         }
+    }
+
+    private DamageSuggestionResult toResult(JsonNode json) {
+        String detail = json.path("detail").asText("");
+        double rate;
+        JsonNode r = json.path("damageRate");
+        if (r.isNumber()) rate = r.asDouble();
+        else {
+            try {
+                rate = Double.parseDouble(r.asText("0"));
+            } catch (Exception ignore) {
+                rate = 0.0;
+            }
+        }
+        rate = Math.max(0.0, Math.min(100.0, rate));
+        String summary = json.path("summary").asText("");
+        return new DamageSuggestionResult(detail, rate, summary);
+    }
+
+    private boolean looksLikeJson(String s) {
+        String t = s.trim();
+        return (t.startsWith("{") && t.endsWith("}")) || (t.startsWith("[") && t.endsWith("]"));
     }
 
 }

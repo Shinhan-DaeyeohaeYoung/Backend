@@ -1,5 +1,3 @@
 package com.joeun.api.gpt.dto;
 
-import java.util.List;
-
-public record DamageSuggestionResult(String text) {}
+public record DamageSuggestionResult(String detail, double damageRate, String summary) {}
