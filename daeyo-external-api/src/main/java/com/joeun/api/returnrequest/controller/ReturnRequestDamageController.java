@@ -20,7 +20,7 @@ public class ReturnRequestDamageController {
 
     @GetMapping("/admin/return-requests/{id}/damage/suggestions")
     public ResponseEntity<DamageSuggestionResult> suggestions(@PathVariable Long id) {
-        var keys = queryService.getBeforeAfterKeys(id);
+        var keys = queryService.    getBeforeAfterKeys(id);
         String beforeUrl = fileUrlResolver.toPublicUrl(keys.beforeKey());
         String afterUrl  = fileUrlResolver.toPublicUrl(keys.afterKey());
         var result = damageSvc.assess(beforeUrl, afterUrl);

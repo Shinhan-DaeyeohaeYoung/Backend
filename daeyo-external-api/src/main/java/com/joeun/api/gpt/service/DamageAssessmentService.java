@@ -13,7 +13,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class DamageAssessmentService {
-
     private final WebClient openAiWebClient;
     private final ObjectMapper om = new ObjectMapper();
 
