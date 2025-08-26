@@ -349,3 +349,4 @@ fabric.properties
 
 scripts/mysql-data
 daeyo-infra/src/main/resources/firebase
+daeyo-infra/src/main/resources/application-infra.yml
