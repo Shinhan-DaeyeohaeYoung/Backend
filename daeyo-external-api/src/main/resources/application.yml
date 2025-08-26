@@ -9,6 +9,7 @@ qr:
   ttl-default-seconds: 50                    # 기본 유효시간(초)
   jwt:
     secret:
-
+openai:
+  api-key:
 server:
   port: 8082
