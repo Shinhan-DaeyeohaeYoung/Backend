@@ -1,5 +1,6 @@
 package com.joeun.domain.notification.entity;
 
+import com.joeun.domain.users.entity.User;
 import com.joeun.global.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -16,9 +17,9 @@ public class Notification extends BaseEntity {
     @Column(name = "notification_id")
     private Long notificationId;
 
-    // Todo: User 엔티티와 연관관계 설정
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Embedded
     private NotiPayload payload;
@@ -31,8 +32,8 @@ public class Notification extends BaseEntity {
     private boolean isRead;
 
     @Builder
-    public Notification(Long userId, NotiPayload payload, NotiType notiType, boolean isRead) {
-        this.userId = userId;
+    public Notification(User user, NotiPayload payload, NotiType notiType, boolean isRead) {
+        this.user = user;
         this.payload = payload;
         this.notiType = notiType;
         this.isRead = isRead;

@@ -2,6 +2,6 @@ package com.joeun.domain.rental.dto;
 
 public interface ExpiredRentalRow {
     Long getId();
-    Long getUnitId();
+    Long getIndividualItemId();
     String getOfferToken();
 }

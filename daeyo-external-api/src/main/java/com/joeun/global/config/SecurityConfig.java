@@ -51,6 +51,7 @@ public class SecurityConfig {
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
         .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/**").permitAll() // TODO: 전체 오픈(추후 수정)
             // 학교 조회
             .requestMatchers(HttpMethod.GET, "/api/universities", "/api/universities/**").permitAll()
             // 회원가입 / 로그인 허용

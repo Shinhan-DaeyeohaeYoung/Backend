@@ -2,21 +2,22 @@ package com.joeun.service.rental;
 
 import com.joeun.domain.item.entity.IndividualItem;
 import com.joeun.domain.item.entity.IndividualItemStatus;
-import com.joeun.domain.item.entity.Item;
 import com.joeun.domain.item.repository.IndividualItemRepository;
 import com.joeun.domain.item.repository.ItemRepository;
+import com.joeun.domain.notification.entity.NotiType;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.rental.entity.RentalStatus;
 import com.joeun.domain.rental.repository.RentalRepository;
 import com.joeun.domain.reservation.service.ReservationRedisService;
 import com.joeun.domain.reservation.vo.ReserveResult;
+import com.joeun.global.dto.NotificationRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.reactive.TransactionSynchronization;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -32,6 +33,7 @@ public class RentalDomainService {
     private final IndividualItemRepository unitRepository;
     private final RentalRepository rentalRepository;
     private final ReservationRedisService reservationRedisService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /** 1) 예약 생성: IndividualItem → RESERVED, Rental(RESERVED) 생성 */
     @Transactional(rollbackFor = Exception.class)
@@ -79,10 +81,20 @@ public class RentalDomainService {
                     .offerToken(offerToken)
                     .build();
 
+            eventPublisher.publishEvent(NotificationRequest.builder()
+                    .notiType(NotiType.RENTAL_RESERVATION)
+                    .userId(userId)
+                    .build()
+            );
+
             return rentalRepository.save(rental).getId();
         } catch (Exception e) {
             try {
                 reservationRedisService.revertReserve(unitId, offerToken);
+                eventPublisher.publishEvent(NotificationRequest.builder()
+                        .notiType(NotiType.HOLDING_CANCEL)
+                        .userId(userId)
+                );
             }
             catch (Exception revertEx) {
                 log.error("failed to revert reservation in Redis", revertEx);
