@@ -5,6 +5,8 @@ import com.joeun.domain.organization.types.OrganizationType;
 import com.joeun.domain.university.entity.University;
 import com.joeun.domain.users.entity.UserOrgMembership;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
@@ -24,6 +26,8 @@ import java.util.List;
 )
 @Data
 @NoArgsConstructor
+@Builder
+@AllArgsConstructor
 public class Organization {
 
   @Id
