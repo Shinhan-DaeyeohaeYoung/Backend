@@ -114,4 +114,8 @@ public class Rental {
         this.status = RentalStatus.EXPIRED;
         this.reserveExpiresAt = LocalDateTime.now();
     }
+    public void markReturned(LocalDateTime now) {
+        this.status = RentalStatus.RETURNED;
+        this.returnedAt = now;
+    }
 }

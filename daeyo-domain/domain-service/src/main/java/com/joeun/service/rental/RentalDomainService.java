@@ -11,9 +11,12 @@ import com.joeun.domain.rental.repository.RentalRepository;
 import com.joeun.domain.reservation.service.ReservationRedisService;
 import com.joeun.domain.reservation.vo.ReserveResult;
 import com.joeun.global.dto.NotificationRequest;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -204,5 +207,121 @@ public class RentalDomainService {
                 unitIds, List.of(RentalStatus.RESERVED, RentalStatus.RENTED)
         );
     }
+    @Transactional(readOnly = true)
+    public Page<Rental> listMyHistory(
+            Long u,
+            Long userId,
+            Set<RentalStatus> statuses,
+            LocalDateTime from,
+            LocalDateTime to,
+            boolean includeExpiredReservations,
+            Pageable pageable
+    ) {
+        Specification<Rental> spec = (root, query, cb) -> {
+            var ands = new ArrayList<Predicate>();
 
+            // tenant & owner
+            ands.add(cb.equal(root.get("universityId"), u));
+            ands.add(cb.equal(root.get("userId"), userId));
+
+            // status filter
+            if (statuses != null && !statuses.isEmpty()) {
+                ands.add(root.get("status").in(statuses));
+            }
+
+            // exclude expired RESERVED when includeExpiredReservations == false
+            if (!includeExpiredReservations) {
+                var notExpiredReserved = cb.or(
+                        cb.notEqual(root.get("status"), RentalStatus.RESERVED),
+                        cb.greaterThan(root.get("reserveExpiresAt"), LocalDateTime.now())
+                );
+                ands.add(notExpiredReserved);
+            }
+
+            // period filter: any of the transition timestamps within [from, to]
+            if (from != null || to != null) {
+                var ors = new ArrayList<Predicate>();
+
+                // helper lambdas
+                var addRange = (java.util.function.BiConsumer<String, String>) (field, unused) -> {
+                    if (from != null && to != null) {
+                        ors.add(cb.between(root.get(field), from, to));
+                    } else if (from != null) {
+                        ors.add(cb.greaterThanOrEqualTo(root.get(field), from));
+                    } else if (to != null) {
+                        ors.add(cb.lessThanOrEqualTo(root.get(field), to));
+                    }
+                };
+
+                addRange.accept("reservedAt", "");
+                addRange.accept("rentedAt", "");
+                addRange.accept("returnedAt", "");
+                addRange.accept("cancelledAt", "");
+
+                // reservedAt/rentedAt/... 가 전부 null일 수도 있으니, OR이 비어있지 않을 때만 추가
+                if (!ors.isEmpty()) {
+                    ands.add(cb.or(ors.toArray(new Predicate[0])));
+                }
+            }
+
+            return cb.and(ands.toArray(new Predicate[0]));
+        };
+
+        return rentalRepository.findAll(spec, pageable);
+    }
+    @Transactional(readOnly = true)
+    public Page<Rental> listMyCurrentRentals(Long u, Long userId, Pageable pageable) {
+        // 반환처리 전까지는 status=REN​TED이므로 이 조건이면 충분
+        return rentalRepository.findAllByUniversityIdAndUserIdAndStatus(
+                u, userId, RentalStatus.RENTED, pageable
+        );
+    }
+    @Transactional(readOnly = true)
+    public Page<Rental> listMyActiveReservationsByOrganization(
+            Long u, Long organizationId, Long userId, Pageable pageable
+    ) {
+        Specification<Rental> spec = (root, query, cb) -> {
+            var ands = new java.util.ArrayList<Predicate>();
+
+            ands.add(cb.equal(root.get("universityId"), u));
+            ands.add(cb.equal(root.get("userId"), userId));
+            ands.add(cb.equal(root.get("status"), RentalStatus.RESERVED));
+            ands.add(cb.greaterThan(root.get("reserveExpiresAt"), LocalDateTime.now())); // 미만료
+
+            // (A) Rental.organizationId = orgId
+            Predicate pA = cb.equal(root.get("organizationId"), organizationId);
+
+            // (B) Rental.item.organizationId = orgId (JOIN)
+            var itemJoin = root.join("item", JoinType.LEFT);
+            Predicate pB = cb.equal(itemJoin.get("organizationId"), organizationId);
+
+            ands.add(cb.or(pA, pB)); // A 또는 B
+
+            return cb.and(ands.toArray(new Predicate[0]));
+        };
+
+        return rentalRepository.findAll(spec, pageable);
+    }
+    @Transactional(readOnly = true)
+    public Page<Rental> listMyCurrentRentalsByOrganization(
+            Long u, Long organizationId, Long userId, Pageable pageable
+    ) {
+        Specification<Rental> spec = (root, query, cb) -> {
+            var ands = new java.util.ArrayList<Predicate>();
+            ands.add(cb.equal(root.get("universityId"), u));
+            ands.add(cb.equal(root.get("userId"), userId));
+            ands.add(cb.equal(root.get("status"), RentalStatus.RENTED));
+            ands.add(cb.isNull(root.get("returnedAt"))); // 반납 전
+
+            // (A) Rental.organizationId = orgId
+            Predicate pA = cb.equal(root.get("organizationId"), organizationId);
+            // (B) Item.organizationId = orgId
+            var itemJoin = root.join("item", JoinType.LEFT);
+            Predicate pB = cb.equal(itemJoin.get("organizationId"), organizationId);
+            ands.add(cb.or(pA, pB));
+
+            return cb.and(ands.toArray(new Predicate[0]));
+        };
+        return rentalRepository.findAll(spec, pageable);
+    }
 }

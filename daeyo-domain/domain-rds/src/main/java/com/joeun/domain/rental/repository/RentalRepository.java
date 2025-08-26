@@ -19,7 +19,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface RentalRepository extends JpaRepository<Rental, Long> {
+public interface RentalRepository extends JpaRepository<Rental, Long>,JpaSpecificationExecutor<Rental> {
     Page<Rental> findAllByUniversityIdAndUserIdAndStatusAndReserveExpiresAtAfter(
             Long universityId, Long userId, RentalStatus status, LocalDateTime now, Pageable pageable);
 
@@ -71,4 +71,20 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
           AND reserve_expires_at <= NOW(6)
         """, nativeQuery = true)
     int bulkExpire(@Param("ids") List<Long> ids);
+
+    Page<Rental> findAllByUniversityIdAndUserIdAndStatus(
+            Long universityId,
+            Long userId,
+            RentalStatus status,
+            Pageable pageable
+    );
+    Page<Rental> findAllByUniversityIdAndOrganizationIdAndUserIdAndStatusAndReserveExpiresAtAfter(
+            Long universityId,
+            Long organizationId,
+            Long userId,
+            RentalStatus status,
+            LocalDateTime now,
+            Pageable pageable
+    );
+
 }
