@@ -2,6 +2,7 @@ package com.joeun.domain.users.repository;
 
 import com.joeun.domain.organization.types.OrganizationType;
 import com.joeun.domain.users.entity.UserOrgMembership;
+import com.joeun.domain.users.types.UserOrgRole;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -32,4 +33,6 @@ public interface UserOrgMembershipRepository extends JpaRepository<UserOrgMember
         and o.type = :type
       """)
   List<UserOrgMembership> findAllWithOrganizationByUserIdAndType(Long userId, OrganizationType type);
+
+  boolean existsByUserIdAndOrganizationIdAndRole(Long userId, Long orgId, UserOrgRole userOrgRole);
 }

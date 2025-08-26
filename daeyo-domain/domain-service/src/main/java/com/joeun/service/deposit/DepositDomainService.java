@@ -3,6 +3,16 @@ package com.joeun.service.deposit;
 import com.joeun.domain.deposit.entity.Deposit;
 import com.joeun.domain.deposit.repository.DepositRepository;
 import com.joeun.domain.deposit.types.DepositStatus;
+import com.joeun.domain.organization.entity.Organization;
+import com.joeun.domain.organization.repository.OrganizationRepository;
+import com.joeun.domain.rental.entity.Rental;
+import com.joeun.domain.university.entity.University;
+import com.joeun.domain.users.entity.User;
+import com.joeun.domain.users.repository.UserRepository;
+import jakarta.transaction.Transactional;
+import java.math.BigDecimal;
+import java.util.Collection;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,6 +22,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class DepositDomainService {
 
+  private final UserRepository userRepo;
+  private final OrganizationRepository orgRepo;
   private final DepositRepository depoRepo;
 
   public Page<Deposit> searchUserDepositsSimple(
@@ -21,4 +33,50 @@ public class DepositDomainService {
   ) {
     return depoRepo.findByUserIdAndStatus(userId, status, pageable);
   }
+
+  @Transactional
+  public List<Deposit> findByOrganization(Long orgId,
+      boolean hasStatuses,
+      Collection<DepositStatus> statuses) {
+    return depoRepo.findByOrganization(orgId, hasStatuses, statuses);
+  }
+
+  @Transactional
+  public Deposit createDeposit(Long userId,
+      Long organizationId,
+      BigDecimal amount,
+      Long rentalId /* 더 이상 사용하지 않지만 시그니처 깔끔히 하려면 제거 가능 */,
+      Long assertedUniversityId /*nullable*/) {
+
+    if (amount == null || amount.signum() <= 0) {
+      throw new IllegalArgumentException("amount must be > 0");
+    }
+
+    Organization org = orgRepo.findById(organizationId)
+        .orElseThrow(() -> new IllegalStateException("organization not found: " + organizationId));
+    University univ = org.getUniversity();
+    Long univId = (univ != null ? univ.getId() : null);
+
+    if (assertedUniversityId != null && !assertedUniversityId.equals(univId)) {
+      throw new IllegalStateException("university_id mismatch with organization");
+    }
+
+    User user = userRepo.findById(userId)
+        .orElseThrow(() -> new IllegalStateException("user not found: " + userId));
+
+    if (user.getUniversity() == null || !user.getUniversity().getId().equals(univId)) {
+      throw new IllegalStateException("user and organization tenant mismatch");
+    }
+
+    Deposit d = new Deposit();
+    d.setUniversity(univ);
+    d.setOrganization(org);
+    d.setUser(user);
+    d.setAmount(amount);
+    d.setStatus(DepositStatus.HELD);
+    d.setRefundAccount(null);
+
+    return depoRepo.save(d);
+  }
+
 }

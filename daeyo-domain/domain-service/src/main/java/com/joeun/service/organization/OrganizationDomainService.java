@@ -61,4 +61,8 @@ public class OrganizationDomainService {
     return membershipRepository.findByUserIdAndOrganizationId(userId, organizationId);
   }
 
+  public boolean isOrgAdmin(Long userId, Long orgId) {
+    return membershipRepository
+        .existsByUserIdAndOrganizationIdAndRole(userId, orgId, UserOrgRole.ORG_ADMIN);
+  }
 }
