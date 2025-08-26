@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface IndividualItemRepository extends  JpaRepository<IndividualItem, Long>{
@@ -50,5 +51,16 @@ public interface IndividualItemRepository extends  JpaRepository<IndividualItem,
        where i.id = :unitId
          and i.status = :fromStatus
     """)
-    int updateStatusIfAvailable(Long unitId, IndividualItemStatus individualItemStatus, IndividualItemStatus individualItemStatus1);
+    int updateStatusIfAvailable(@Param("unitId") Long unitId,
+                                @Param("toStatus") IndividualItemStatus toStatus,
+                                @Param("fromStatus") IndividualItemStatus fromStatus);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+        UPDATE individual_item
+        SET status = 'AVAILABLE'
+        WHERE id IN (:unitIds)
+          AND status = 'RESERVED'
+        """, nativeQuery = true)
+    int bulkMakeAvailable(@Param("unitIds") List<Long> unitIds);
 }
