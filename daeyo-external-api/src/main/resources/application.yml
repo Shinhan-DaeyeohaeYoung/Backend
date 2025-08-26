@@ -33,4 +33,11 @@ qr:
 openai:
   key:
   model: gpt-4o-mini
-  base-url: "${OPENAI_BASE_URL:https://api.openai.com/v1}"
+  base-url: "${OPENAI_BASE_URL:https://api.openai.com}"
+
+file:
+  storage: mock
+  s3:
+    bucket: dummy
+    region: ap-northeast-2
+    publicBaseUrl: ""
