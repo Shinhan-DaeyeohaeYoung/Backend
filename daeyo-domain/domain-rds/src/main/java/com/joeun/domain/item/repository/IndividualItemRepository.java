@@ -10,15 +10,14 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface IndividualItemRepository extends  JpaRepository<IndividualItem, Long> {
     Page<IndividualItem> findAllByItem(Item item, Pageable pageable);
-
     long countByItemAndStatus(Item item, IndividualItemStatus status);
 
     boolean existsByItemAndAssetNo(Item item, String assetNo);
-
     Optional<IndividualItem> findByItemAndAssetNo(Item item, String assetNo);
 
     long countByItem(Item item);
@@ -49,19 +48,23 @@ public interface IndividualItemRepository extends  JpaRepository<IndividualItem,
       """)
     Optional<IndividualItem> findByIdAndTenant(Long u, Long o, Long unitId);
 
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+      update IndividualItem i
+         set i.status = :toStatus
+       where i.id = :unitId
+         and i.status = :fromStatus
+    """)
+    int updateStatusIfAvailable(@Param("unitId") Long unitId,
+                                @Param("toStatus") IndividualItemStatus toStatus,
+                                @Param("fromStatus") IndividualItemStatus fromStatus);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Transactional
-    @Query("""
-        update IndividualItem i
-           set i.status = :toStatus
-         where i.id = :unitId
-           and i.status = :fromStatus
-    """)
-    int updateStatusIfAvailable(
-            @Param("unitId") Long unitId,
-            @Param("fromStatus") IndividualItemStatus fromStatus,
-            @Param("toStatus") IndividualItemStatus toStatus
-    );
-
-    }
+    @Query(value = """
+        UPDATE individual_item
+        SET status = 'AVAILABLE'
+        WHERE id IN (:unitIds)
+          AND status = 'RESERVED'
+        """, nativeQuery = true)
+    int bulkMakeAvailable(@Param("unitIds") List<Long> unitIds);
+}
