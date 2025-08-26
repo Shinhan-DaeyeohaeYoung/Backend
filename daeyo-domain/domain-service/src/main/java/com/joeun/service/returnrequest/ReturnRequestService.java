@@ -1,4 +1,4 @@
-package com.joeun.domain.returnrequest.service;
+package com.joeun.service.returnrequest;
 
 import com.joeun.domain.item.repository.IndividualItemRepository;
 import com.joeun.domain.item.repository.UnitPhotoRepository;
@@ -8,10 +8,12 @@ import com.joeun.domain.rental.repository.RentalRepository;
 import com.joeun.domain.returnrequest.entity.ReturnRequest;
 import com.joeun.domain.returnrequest.entity.ReturnRequestStatus;
 import com.joeun.domain.returnrequest.repository.ReturnRequestRepository;
+import com.joeun.domain.waitlist.entity.Waitlist;
+import com.joeun.service.rental.RentalDomainService;
+import com.joeun.service.waitlist.WaitlistDomainService;
 import jakarta.persistence.EntityNotFoundException;
 
-import org.hibernate.engine.jdbc.connections.spi.AbstractMultiTenantConnectionProvider;
-import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,6 +23,7 @@ import com.joeun.domain.item.entity.UnitPhoto;
 
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +33,8 @@ public class ReturnRequestService {
     private final RentalRepository rentalRepository;
     private final UnitPhotoRepository unitPhotoRepository;
     private final IndividualItemRepository individualItemRepository;
+    private final WaitlistDomainService waitlistDomainService;
+    private final RentalDomainService rentalDomainService;
 
 
     /* ================== 조회 (관리자) ================== */
@@ -104,6 +109,15 @@ public class ReturnRequestService {
         rr.approve(approverUserId, LocalDateTime.now());
 
         this.markRentalReturnedByReturnApproval(u, o, rr.getRental().getId(), approverUserId);
+
+        // 2-1) 대기열 존재 시 대기열 유저 할당
+        Optional<Waitlist> waitlist = waitlistDomainService.getNextOutstandingWaitlist(rr.getRental().getItem().getId());
+
+        if(waitlist.isPresent()){
+            Waitlist w = waitlist.get();
+            waitlistDomainService.markNotified(w.getId(), LocalDateTime.now());
+            return rr;
+        }
 
         // 3) 개별 상품 AVAILABLE 처리
         Long unitId = rr.getRental().getUnit().getId();

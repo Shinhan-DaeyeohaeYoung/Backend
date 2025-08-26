@@ -3,7 +3,7 @@ package com.joeun.api.returnrequest.controller;
 import com.joeun.api.returnrequest.dto.*;
 import com.joeun.api.security.TenantProvider;
 import com.joeun.domain.returnrequest.entity.ReturnRequestStatus;
-import com.joeun.domain.returnrequest.service.ReturnRequestService;
+import com.joeun.service.returnrequest.ReturnRequestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
