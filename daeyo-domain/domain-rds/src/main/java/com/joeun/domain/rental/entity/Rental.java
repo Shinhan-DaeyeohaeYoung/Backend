@@ -86,6 +86,9 @@ public class Rental {
     @Column(name = "offer_token", length = 64)
     private String offerToken;
 
+    @Column(name = "expired_at")
+    private LocalDateTime expiredAt;
+
     /* ========= 도메인 메서드 ========= */
 
     /** 대여 시작 */

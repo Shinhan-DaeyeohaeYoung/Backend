@@ -34,10 +34,10 @@ public class HoldExpiryFallbackScheduler {
                 if (rows.isEmpty()) return rows;
 
                 List<Long> ids = rows.stream().map(ExpiredRentalRow::getId).toList();
-                List<Long> unitIds = rows.stream().map(ExpiredRentalRow::getUnitId).toList();
+                List<Long> individualItemIds = rows.stream().map(ExpiredRentalRow::getIndividualItemId).toList();
 
                 int changed1 = rentalRepository.bulkExpire(ids);
-                int changed2 = individualItemRepository.bulkMakeAvailable(unitIds);
+                int changed2 = individualItemRepository.bulkMakeAvailable(individualItemIds);
 
                 log.debug("fallback batch: rentals={}, units={}", changed1, changed2);
                 return rows;
@@ -48,11 +48,10 @@ public class HoldExpiryFallbackScheduler {
 
             for (ExpiredRentalRow row : processed) {
                 try {
-                    reservationRedisService.cleanupReserve(row.getUnitId(), row.getOfferToken());
+                    reservationRedisService.cleanupReserve(row.getIndividualItemId(), row.getOfferToken());
                 } catch (Exception ex) {
-                    // 커밋 후 구간 → 롤백 불가. 재시도 큐/로그 남기기
                     log.warn("cleanup after commit failed unitId={}, token={}",
-                            row.getUnitId(), row.getOfferToken(), ex);
+                            row.getIndividualItemId(), row.getOfferToken(), ex);
                 }
             }
 

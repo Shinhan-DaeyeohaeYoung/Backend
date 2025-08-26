@@ -44,7 +44,7 @@ public class NotificationRdsService {
     @Transactional
     public void markAsRead(Long notificationId, Long userId) {
         Notification notifications = findNotificationById(notificationId);
-        if (notifications.getUserId().equals(userId)) {
+        if (notifications.getUser().getId().equals(userId)) {
             notifications.markRead();
         } else {
             throw new IllegalArgumentException("User does not have permission to mark this notification as read.");

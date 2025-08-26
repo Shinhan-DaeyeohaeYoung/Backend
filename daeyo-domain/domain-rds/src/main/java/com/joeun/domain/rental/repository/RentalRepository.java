@@ -50,7 +50,7 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
 
     @Query(value = """
         SELECT r.id          AS id,
-               r.unit_id     AS unitId,
+               r.individual_item_id     AS individualItemId,
                r.offer_token AS offerToken
         FROM rental r
         WHERE r.status = 'RESERVED'
