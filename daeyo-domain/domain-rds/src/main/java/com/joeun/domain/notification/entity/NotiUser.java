@@ -1,5 +1,6 @@
 package com.joeun.domain.notification.entity;
 
+import com.joeun.domain.users.entity.User;
 import com.joeun.global.domain.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -13,9 +14,9 @@ public class NotiUser extends BaseEntity {
     @Column(name = "noti_user_id")
     private Long notiUserId;
 
-    // Todo: 추 후 User 엔티티와 연관관계 설정
-    @Column(name = "user_id")
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Embedded
     @Column(name = "device_info")
@@ -25,13 +26,13 @@ public class NotiUser extends BaseEntity {
     private boolean isActive;
 
     @Builder
-    public NotiUser(Long userId, DeviceInfo deviceInfo, boolean isActive) {
-        this.userId = userId;
+    public NotiUser(User user, DeviceInfo deviceInfo, boolean isActive) {
+        this.user = user;
         this.deviceInfo = deviceInfo;
         this.isActive = isActive;
     }
 
     public void setActive(boolean active) {
-        isActive = active;
+        this.isActive = active;
     }
 }

@@ -4,7 +4,9 @@ import com.joeun.api.notification.dto.NotiUserDisableRequest;
 import com.joeun.api.notification.dto.NotiUserRequest;
 import com.joeun.domain.notification.entity.DeviceInfo;
 import com.joeun.domain.notification.entity.NotiUser;
+import com.joeun.domain.users.entity.User;
 import com.joeun.service.notification.NotiUserDomainService;
+import com.joeun.service.user.UserDomainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -13,11 +15,15 @@ import org.springframework.stereotype.Service;
 public class NotiUserService {
 
     private final NotiUserDomainService notiUserDomainService;
+    private final UserDomainService userDomainService;
 
     public void createNotiUser(NotiUserRequest request) {
 
+        User user = userDomainService.findById(request.userId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + request.userId()));
+
         NotiUser notiUser = NotiUser.builder()
-                .userId(request.userId())
+                .user(user)
                 .deviceInfo(
                         DeviceInfo.builder()
                                 .token(request.token())

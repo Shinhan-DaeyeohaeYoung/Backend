@@ -18,7 +18,7 @@ public record NotificationResponse(
                 .notificationId(notification.getNotificationId())
                 .title(notification.getPayload().getTitle())
                 .content(notification.getPayload().getMessage())
-                .userId(notification.getUserId())
+                .userId(notification.getUser().getId())
                 .build();
     }
 }
