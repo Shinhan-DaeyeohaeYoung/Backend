@@ -18,6 +18,8 @@ public class ItemDomainService {
 
     /* ===== 아이템 ////// */
 
+
+
     @Transactional
     public Item createItem(Long u, Long o, String name, String desc, Long deposit, Integer maxDays, Boolean active) {
         Item item = Item.builder()
@@ -138,6 +140,64 @@ public class ItemDomainService {
             item.increaseStock(1);
         }
         // totalQuantity는 상태 변경으로는 변하지 않음(유닛 추가/삭제시에만 변경)
+    }
+    @Transactional(readOnly = true)
+    public Page<Item> listActive(Long actorUserId, Set<Long> orgIds, Pageable pageable) {
+        // 조회 자체는 orgIds 기준으로 수행
+        return itemRepository.findAllByOrganizationIdInAndIsActiveTrue(orgIds, pageable);
+    }
+    /** 아이템의 유닛 총 개수(삭제 전 집계용) */
+    @Transactional(readOnly = true)
+    public int countUnits(Long u, Long o, Long itemId) {
+        Item item = getByTenant(u, o, itemId);
+        long total =
+                unitRepository.countByItemAndStatus(item, IndividualItemStatus.AVAILABLE) +
+                        unitRepository.countByItemAndStatus(item, IndividualItemStatus.RESERVED) +
+                        unitRepository.countByItemAndStatus(item, IndividualItemStatus.RENTED) +
+                        unitRepository.countByItemAndStatus(item, IndividualItemStatus.REPAIR) +
+                        unitRepository.countByItemAndStatus(item, IndividualItemStatus.LOST) +
+                        unitRepository.countByItemAndStatus(item, IndividualItemStatus.DISPOSED);
+        return (int) total;
+    }
+
+    /** 아이템 + 소속 유닛 전체 삭제(단일 트랜잭션) */
+    @Transactional
+    public int deleteItemCascade(Long u, Long o, Long itemId) {
+        Item item = getByTenant(u, o, itemId);
+
+        // 모든 유닛 로드(언페이지드)
+        Page<IndividualItem> unitsPage = unitRepository.findAllByItem(item, Pageable.unpaged());
+        var units = unitsPage.getContent();
+        int unitsDeleted = units.size();
+
+        // 개별 유닛 삭제 (재고 보정이 의미 없으므로 바로 삭제)
+        for (IndividualItem unit : units) {
+            unitRepository.delete(unit);
+        }
+
+        // 아이템 삭제
+        itemRepository.delete(item);
+
+        return unitsDeleted;
+    }
+
+    /** 특정 자산번호 유닛 삭제(+ 필요한 재고 보정) */
+    @Transactional
+    public void deleteUnitByAssetNo(Long u, Long o, Long itemId, String assetNo) {
+        Item item = getByTenant(u, o, itemId);
+
+        // 잠금 후 유닛 조회
+        IndividualItem unit = unitRepository.findWithLockByItemAndAssetNo(item, assetNo)
+                .orElseThrow(() -> new NoSuchElementException("unit not found: assetNo=" + assetNo));
+
+        // 재고 보정: AVAILABLE 였다면 가용 수량 1 감소
+        if (unit.getStatus() == IndividualItemStatus.AVAILABLE) {
+            item.decreaseStock(1);
+        }
+        // 총 수량 1 감소(엔티티 메서드가 있으면 그걸 사용)
+        item.setTotalQuantity(item.getTotalQuantity() - 1);
+
+        unitRepository.delete(unit);
     }
 
 }

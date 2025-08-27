@@ -1,7 +1,9 @@
 package com.joeun.api.qr.controller;
 
+import com.joeun.api.organization.dto.MyOrganizationResponse;
+import com.joeun.api.organization.service.OrganizationService;
 import com.joeun.api.qr.service.QrService;
-import com.joeun.api.security.TenantProvider;
+import com.joeun.global.config.LoginUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -11,9 +13,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @RestController
 @RequiredArgsConstructor
@@ -22,7 +28,36 @@ import java.util.Map;
 public class QrController {
 
     private final QrService qrService;
-    private final TenantProvider tenant;
+    private final OrganizationService organizationService;
+
+    private static boolean isAdminRole(String role) {
+        return role != null && (role.equals("ORG_ADMIN") || role.equals("ADMIN"));
+    }
+
+    private MyOrganizationResponse pickAdminOrg(LoginUser loginUser, Long organizationId) {
+        var adminMemberships = organizationService.getMyOrganizations(loginUser, "")
+                .stream()
+                .filter(m -> isAdminRole(m.getRole()))
+                .collect(Collectors.toList());
+
+        if (organizationId != null) {
+            return adminMemberships.stream()
+                    .filter(m -> Objects.equals(m.getOrganizationId(), organizationId))
+                    .findFirst()
+                    .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                            HttpStatus.FORBIDDEN, "Not an admin of organizationId=" + organizationId));
+        }
+
+        if (adminMemberships.size() == 1) {
+            return adminMemberships.get(0);
+        }
+
+        throw new org.springframework.web.server.ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "organizationId is required (admin memberships=" + adminMemberships.size() + ")"
+        );
+    }
+
 
     /** (관리자) 조직 QR PNG 발급 — 짧은 TTL + 리프레시용 */
     @Operation(
@@ -39,13 +74,16 @@ public class QrController {
             @ApiResponse(responseCode = "400", description = "요청 파라미터 오류")
     })
     @GetMapping(value = "/admin/org-qr.png", produces = MediaType.IMAGE_PNG_VALUE)
-    public ResponseEntity<byte[]> orgQrPng(@RequestParam(defaultValue = "SITE") String type,
+    public ResponseEntity<byte[]> orgQrPng(@AuthenticationPrincipal LoginUser loginUser,
+                                           @RequestParam(required = false) Long organizationId,
+                                           @RequestParam(defaultValue = "SITE") String type,
                                            @RequestParam(required = false) Long siteId,
                                            @RequestParam(required = false) Long ttlSec,
                                            // 매 호출마다 캐시Bust용 임의 값(타임스탬프 등) 넘겨도 OK
                                            @RequestParam(required = false) Long nonce) {
-        Long u = tenant.universityId();
-        Long o = tenant.organizationId();
+        var m = pickAdminOrg(loginUser, organizationId);
+        Long u = m.getUniversityId();
+        Long o = m.getOrganizationId();
 
         byte[] png = qrService.generateOrgQrPng(u, o, type, siteId, ttlSec);
 
@@ -89,19 +127,23 @@ public class QrController {
             @ApiResponse(responseCode = "400", description = "요청 파라미터 오류")
     })
     @GetMapping("/admin/org-qr/meta")
-    public Map<String, Object> orgQrMeta(@RequestParam(defaultValue = "SITE") String type,
+    public Map<String, Object> orgQrMeta(@AuthenticationPrincipal LoginUser loginUser,
+                                         @RequestParam(required = false) Long organizationId,
+                                         @RequestParam(defaultValue = "SITE") String type,
                                          @RequestParam(required = false) Long siteId,
                                          @RequestParam(required = false) Long ttlSec) {
-        var t = qrService.currentTenant();
-        String token = qrService.buildOrgToken(t.get("u"), t.get("o"), type, siteId, ttlSec);
+        var m = pickAdminOrg(loginUser, organizationId);
+        Long u = m.getUniversityId();
+        Long o = m.getOrganizationId();
+
+        String token = qrService.buildOrgToken(u, o, type, siteId, ttlSec);
         var resolved = qrService.validateToken(token);
 
-        var body = new java.util.LinkedHashMap<String, Object>();
+        var body = new LinkedHashMap<String, Object>();
         body.put("token", token);
         body.put("type", resolved.get("type"));
         body.put("universityId", resolved.get("universityId"));
         body.put("organizationId", resolved.get("organizationId"));
-        // siteId는 null일 수 있으니 조건부로
         Object sid = resolved.get("siteId");
         if (sid != null) body.put("siteId", sid);
         body.put("issuedAt", resolved.get("issuedAt"));

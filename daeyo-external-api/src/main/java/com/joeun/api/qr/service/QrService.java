@@ -24,8 +24,6 @@ import java.util.*;
 @RequiredArgsConstructor
 public class QrService {
 
-    private final TenantProvider tenant;
-
     @Value("${qr.jwt.secret}")
     private String secret; // 최소 64바이트 이상 권장
 
@@ -113,10 +111,5 @@ public class QrService {
         result.put("expiresAt", c.getExpiration());
         result.put("jti", c.get("jti"));
         return result;
-    }
-
-    /** 현재 관리자 컨텍스트(대학/조직) 꺼내기 */
-    public Map<String, Long> currentTenant() {
-        return Map.of("u", tenant.universityId(), "o", tenant.organizationId());
     }
 }

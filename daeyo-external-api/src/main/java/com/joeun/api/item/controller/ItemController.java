@@ -4,6 +4,7 @@ import com.joeun.api.item.dto.ItemDtos;
 import com.joeun.api.item.dto.PageResponse;
 import com.joeun.api.item.dto.UnitPhotoDtos;
 import com.joeun.api.item.service.ItemApplicationService;
+import com.joeun.global.config.LoginUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,10 +12,12 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -22,6 +25,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
+@SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Items", description = "사용자용 아이템 조회 API")
 public class ItemController {
 
@@ -64,8 +68,10 @@ public class ItemController {
     @GetMapping("/items")
     public PageResponse<ItemDtos.ItemSummaryResponse> list(
             @Parameter(hidden = true)
+            @AuthenticationPrincipal LoginUser loginUser,
             @PageableDefault(size = 20, sort = "id") Pageable pageable) {
-        return PageResponse.from(app.listForUser(pageable));
+
+        return PageResponse.from(app.listForUser(loginUser, pageable));
     }
     @Operation(
             summary = "아이템 상세(사용자)",
@@ -113,8 +119,9 @@ public class ItemController {
     public ItemDtos.ItemDetailResponse userDetail(
             @PathVariable Long itemId,
             @Parameter(hidden = true)
-                                                  @PageableDefault(size = 50, sort = "id") Pageable pageable) {
-        return app.getItemDetail(itemId, pageable, true, true);
+            @PageableDefault(size = 50, sort = "id") Pageable pageable,
+            @AuthenticationPrincipal LoginUser loginUser) {
+        return app.getItemDetailForUser(itemId, pageable, true, true,loginUser);
     }
 
     /** 유닛 단건 사진 조회 */
@@ -145,7 +152,8 @@ public class ItemController {
     })
     @GetMapping("/items/{itemId}/units/{assetNo}/photo")
     public UnitPhotoDtos.DetailResponse unitPhoto(@PathVariable Long itemId,
-                                                  @PathVariable String assetNo ) {
-        return app.getUnitPhoto(itemId, assetNo);
+                                                  @PathVariable String assetNo,
+                                                  @AuthenticationPrincipal LoginUser loginUser) {
+        return app.getUnitPhoto(itemId, assetNo,loginUser);
     }
 }
