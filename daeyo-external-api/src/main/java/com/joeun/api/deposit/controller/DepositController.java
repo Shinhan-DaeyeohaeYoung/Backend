@@ -1,8 +1,11 @@
 package com.joeun.api.deposit.controller;
 
+import com.joeun.api.deposit.dto.DepositAdminDetailResponse;
 import com.joeun.api.deposit.dto.DepositCreateRequest;
 import com.joeun.api.deposit.dto.DepositCreateResponse;
+import com.joeun.api.deposit.dto.DepositForfeitResponse;
 import com.joeun.api.deposit.dto.DepositListDto;
+import com.joeun.api.deposit.dto.DepositRefundResponse;
 import com.joeun.api.deposit.dto.DepositResponse;
 import com.joeun.api.deposit.service.DepositService;
 import com.joeun.domain.deposit.types.DepositStatus;
@@ -63,8 +66,7 @@ public class DepositController {
       @AuthenticationPrincipal LoginUser loginUser,
       @RequestParam(name = "status", required = false) String statusCsv // 예: HELD,RELEASED
   ) {
-    log.info("loginUser={}", loginUser.id());
-
+    // log.info("loginUser={}", loginUser.id());
     Set<DepositStatus> statuses = parseStatuses(statusCsv);
     List<DepositListDto> result = depositService.listOrganizationDeposits(loginUser, orgId, statuses);
     return ResponseEntity.ok(result);
@@ -95,5 +97,33 @@ public class DepositController {
     return ResponseEntity
         .created(URI.create("/api/deposits/" + created.getId()))
         .body(created);
+  }
+
+  @GetMapping("/{id}")
+  public ResponseEntity<DepositAdminDetailResponse> getDeposit(
+      @PathVariable("id") Long depositId,
+      @AuthenticationPrincipal LoginUser loginUser
+  ) {
+    var dto = depositService.getDepositDetail(depositId, loginUser);
+    return ResponseEntity.ok(dto);
+  }
+
+  @PostMapping("/{id}/refund")
+  public ResponseEntity<DepositRefundResponse> refundFull(
+      @PathVariable("id") Long depositId,
+      @AuthenticationPrincipal LoginUser loginUser
+  ) {
+    var resp = depositService.refundFull(depositId, loginUser);
+    return ResponseEntity.ok(resp);
+  }
+
+
+  @PostMapping("/{id}/forfeit")
+  public ResponseEntity<DepositForfeitResponse> forfeitFull(
+      @PathVariable("id") Long depositId,
+      @AuthenticationPrincipal LoginUser loginUser
+  ) {
+    var resp = depositService.forfeitFull(depositId, loginUser);
+    return ResponseEntity.ok(resp);
   }
 }

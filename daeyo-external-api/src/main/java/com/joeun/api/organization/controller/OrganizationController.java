@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/organization")
+@RequestMapping("/api/organizations")
 @RequiredArgsConstructor
 public class OrganizationController {
 

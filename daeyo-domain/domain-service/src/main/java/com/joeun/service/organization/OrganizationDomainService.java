@@ -65,4 +65,11 @@ public class OrganizationDomainService {
     return membershipRepository
         .existsByUserIdAndOrganizationIdAndRole(userId, orgId, UserOrgRole.ORG_ADMIN);
   }
+
+  @Transactional
+  public boolean existsByUserOrgAndRole(Long userId, Long organizationId, UserOrgRole role) {
+    return membershipRepository.existsByUserIdAndOrganizationIdAndRole(userId, organizationId, role);
+  }
+
+
 }
