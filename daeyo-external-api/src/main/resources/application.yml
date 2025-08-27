@@ -31,8 +31,11 @@ qr:
     default-ttl-seconds: "${QR_JWT_DEFAULT_TTL:180}"       # QrService @Value 와 일치!
 
 openai:
+  key:
   model: gpt-4o-mini
   base-url: "${OPENAI_BASE_URL:https://api.openai.com}"
+
+
 
 file:
   storage: mock

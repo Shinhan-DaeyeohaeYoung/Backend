@@ -20,7 +20,7 @@ public class OrganizationService {
   private final OrganizationDomainService organizationDomainService;
   private final UserDomainService userDomainService;
 
-  public UserOrgMembership joinOrganization(LoginUser loginUser, Long organizationId) {
+/*  public UserOrgMembership joinOrganization(LoginUser loginUser, Long organizationId) {
     User user = userDomainService.findById(loginUser.id())
         .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
            HttpStatus.NOT_FOUND,
@@ -46,7 +46,7 @@ public class OrganizationService {
             HttpStatus.NOT_FOUND,
             "Membership not created"
         ));
-  }
+  }*/
 
   public List<MyOrganizationResponse> getMyOrganizations(LoginUser loginUser, String type) {
     User user = userDomainService.findById(loginUser.id())

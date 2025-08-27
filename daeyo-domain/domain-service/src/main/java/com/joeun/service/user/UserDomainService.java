@@ -1,5 +1,6 @@
 package com.joeun.service.user;
 
+import com.joeun.domain.students.entity.Student;
 import com.joeun.domain.university.entity.University;
 import com.joeun.domain.university.repository.UniversityRepository;
 import com.joeun.domain.users.entity.User;
@@ -66,6 +67,24 @@ public class UserDomainService {
   @Transactional(readOnly = true)
   public List<UserBankAccount> listBankAccounts(Long userId) {
     return accountRepo.findAllByUser_IdOrderByIsPrimaryDescCreatedAtDesc(userId);
+  }
+
+  @Transactional(readOnly = true)
+  public boolean existsByEmail(String email) {
+    return userRepo.existsByEmail(email);
+  }
+
+  @Transactional
+  public User createFromStudent(Student s) {
+    User u = User.builder()
+        .university(s.getUniversity())
+        .name(s.getName())
+        .email(s.getEmail())
+        .studentId(s.getStudentNo())     // User.studentId = 학번 문자열
+        .passwordHash(s.getPasswordHash()) // 동일 해시 복사
+        .role("USER")
+        .build();
+    return userRepo.save(u);
   }
 
 }
