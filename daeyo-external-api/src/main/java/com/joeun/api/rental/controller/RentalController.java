@@ -179,5 +179,154 @@ public class RentalController {
         app.cancel(userId, id);
         return Map.of("id", id, "cancelled", true);
     }
+
+
+    // RentalController.java (추가)
+    // 6) 내 대여 이력 전체(과거 포함) 조회
+    @Operation(
+            summary = "내 대여 이력 조회(과거 포함)",
+            description = """
+                사용자의 모든 대여 이력을 페이지로 반환합니다.
+                - 상태 필터링: RESERVED / RENTED / CANCELLED / RETURNED 등 상태로 필터링 가능
+                - 기간 필터링: from ~ to (ISO-8601, 예: 2025-08-01T00:00:00)
+                - includeExpiredReservations: true이면 만료된 RESERVED 예약도 포함
+                기본 정렬은 최신순(updatedAt 또는 상태 전이 일시)입니다.
+                """
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = PageResponse.class),
+                            examples = @ExampleObject(
+                                    value = """
+                    {
+                      "content": [
+                        {
+                          "id": 42,
+                          "status": "RENTED",
+                          "itemId": 2,
+                          "unitId": 4,
+                          "reservedAt": "2025-08-20T11:30:12.100",
+                          "reserveExpiresAt": "2025-08-20T12:00:12.100",
+                          "rentedAt": "2025-08-20T11:45:01.000",
+                          "dueAt": "2025-08-27T12:00:00",
+                          "returnedAt": null,
+                          "expired": false
+                        }
+                      ],
+                      "page": 0,
+                      "size": 20,
+                      "totalElements": 2
+                    }
+                    """
+                            )
+                    )
+            )
+    })
+    @GetMapping("/rentals")
+    public PageResponse<RentalHistoryItem> myRentalHistory(
+            @Parameter(description = "상태 필터(콤마 구분). 예: RENTED,RETURNED. 미지정 시 모두")
+            @RequestParam(required = false) String status,
+
+            @Parameter(description = "조회 시작 시각(ISO-8601). 예: 2025-08-01T00:00:00")
+            @RequestParam(required = false) String from,
+
+            @Parameter(description = "조회 종료 시각(ISO-8601). 예: 2025-08-31T23:59:59")
+            @RequestParam(required = false) String to,
+
+            @Parameter(description = "만료된 RESERVED 예약 포함 여부(기본: false)")
+            @RequestParam(required = false, defaultValue = "false") boolean includeExpiredReservations,
+
+            @Parameter(hidden = true)
+            @PageableDefault(size = 20, sort = "rentedAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Long userId = 1L;
+        return PageResponse.from(
+                app.listMyRentalHistory(userId, status, from, to, includeExpiredReservations, pageable)
+        );
+    }
+
+
+
+    @Operation(
+            summary = "내 현재 대여중 목록",
+            description = "상태가 REN​TED인 대여만 페이지로 반환합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    content = @Content(
+                            schema = @Schema(implementation = PageResponse.class),
+                            examples = @ExampleObject(
+                                    value = """
+{
+  "content": [
+    {
+      "id": 9001,
+      "universityId": 1,
+      "userId": 321,
+      "itemId": 11,
+      "organizationId": 201,
+      "individualItemId": 501,
+      "quantity": 1,
+      "rentedAt": "2025-08-20T12:00:00",
+      "dueAt": "2025-08-27T12:00:00",
+      "returnedAt": null,
+      "status": "RENTED",
+      "depositId": 700
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1
+}
+"""
+                            )
+                    )
+            )
+    })
+    @GetMapping("/rentals/myitems")
+    public PageResponse<RentalDtos.CurrentRentalItem> myCurrentRentals(
+            @PageableDefault(size = 20, sort = "rentedAt", direction = Sort.Direction.DESC)
+            Pageable pageable
+    ) {
+        Long userId = 1L;
+        return PageResponse.from(app.listMyCurrentRentals(userId, pageable));
+    }
+
+    @Operation(
+            summary = "내 홀딩 예약 중 특정 조직의 것만",
+            description = "현재 사용자(userId)의 RESERVED 상태이면서 만료 전이고, 전달한 organizationId에 속한 예약만 페이지로 반환합니다."
+    )
+    @GetMapping("/rental-requests/{organizationId}/holding")
+    public PageResponse<RentalDtos.ReservationSummary> myOrgReservations(
+            @PathVariable Long organizationId,
+            @Parameter(hidden = true)
+            @PageableDefault(size = 20, sort = "reservedAt", direction = Sort.Direction.DESC)
+            Pageable pageable
+    ) {
+        Long userId = 1L; // TODO: 인증 연동 시 교체
+        return PageResponse.from(app.listMyReservationsByOrganization(userId, organizationId, pageable));
+    }
+    @Operation(
+            summary = "내 대여중(REN​TED) 목록 - 특정 조직만",
+            description = "현재 사용자(userId)가 RENTED 상태이며 아직 반납되지 않은 대여 중, 전달한 organizationId에 속한 것만 페이지로 반환합니다."
+    )
+    @GetMapping("/rentals/organizations/{organizationId}")
+    public PageResponse<RentalDtos.CurrentRentalItem> myCurrentRentalsByOrg(
+            @PathVariable Long organizationId,
+            @Parameter(hidden = true)
+            @PageableDefault(size = 20, sort = "rentedAt", direction = Sort.Direction.DESC)
+            Pageable pageable
+    ) {
+        Long userId = 1L; // TODO: 인증 연동 시 교체
+        return PageResponse.from(app.listMyCurrentRentalsByOrganization(userId, organizationId, pageable));
+    }
+
+
 }
 

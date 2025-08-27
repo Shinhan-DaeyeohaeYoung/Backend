@@ -4,12 +4,6 @@ spring:
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
 
-qr:
-  scan-url: "http://localhost:5173/scan"     # 스캔 후 프론트 라우트
-  ttl-default-seconds: 50                    # 기본 유효시간(초)
-  jwt:
-    secret:
-    
 server:
   port: 8082
 
@@ -26,6 +20,27 @@ jwt:
 
 crypto:
   key: "${CRYPTO_KEY_BASE64:ue7iqDtaqodXtcJXhhjPj4f61HIM4MPKBl5K6Tq6suU=}"
+
+#QR 관련 설정 (QrService
+qr:
+  scheme: "${QR_SCHEME:daeyo}"                # ex) daeyo://site?token=...
+  size: "${QR_SIZE:320}"
+  scan-url: "${QR_SCAN_URL:http://localhost:5173/scan}"  # 스캔 후 프론트 라우트 (컨트롤러에서 쓰면)
+  jwt:
+    secret: "${QR_JWT_SECRET:please-set-64+chars-secret}"
+    default-ttl-seconds: "${QR_JWT_DEFAULT_TTL:180}"       # QrService @Value 와 일치!
+
+openai:
+  key:
+  model: gpt-4o-mini
+  base-url: "${OPENAI_BASE_URL:https://api.openai.com}"
+
+file:
+  storage: mock
+  s3:
+    bucket: dummy
+    region: ap-northeast-2
+    publicBaseUrl: ""
 
 logging:
   level:

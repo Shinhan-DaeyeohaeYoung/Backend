@@ -16,5 +16,31 @@ public final class RentalDtos {
     ) {}
 
     public record ApproveResponse(Long id, String status, String dueAt) {}
+    public static record RentalHistoryItem(
+            Long id,
+            String status,          // RESERVED / RENTED / CANCELLED / RETURNED ...
+            Long itemId,
+            Long unitId,
+            String reservedAt,
+            String reserveExpiresAt,
+            String rentedAt,
+            String dueAt,
+            String returnedAt,
+            boolean expired         // RESERVED였으나 TTL 만료되었으면 true
+    ) {}
+    public static record CurrentRentalItem(
+            Long id,
+            Long universityId,
+            Long organizationId,
+            Long userId,
+            Long itemId,
+            Long individualItemId,
+            Integer quantity,
+            String rentedAt,
+            String dueAt,
+            String returnedAt,
+            String status,
+            Long depositId
+    ) {}
 }
 

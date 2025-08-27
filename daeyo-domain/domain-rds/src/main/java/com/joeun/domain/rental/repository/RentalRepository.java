@@ -8,6 +8,10 @@ import jakarta.persistence.QueryHint;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.*;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
@@ -15,7 +19,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface RentalRepository extends JpaRepository<Rental, Long> {
+public interface RentalRepository extends JpaRepository<Rental, Long>,JpaSpecificationExecutor<Rental> {
     Page<Rental> findAllByUniversityIdAndUserIdAndStatusAndReserveExpiresAtAfter(
             Long universityId, Long userId, RentalStatus status, LocalDateTime now, Pageable pageable);
 
@@ -67,4 +71,20 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
           AND reserve_expires_at <= NOW(6)
         """, nativeQuery = true)
     int bulkExpire(@Param("ids") List<Long> ids);
+
+    Page<Rental> findAllByUniversityIdAndUserIdAndStatus(
+            Long universityId,
+            Long userId,
+            RentalStatus status,
+            Pageable pageable
+    );
+    Page<Rental> findAllByUniversityIdAndOrganizationIdAndUserIdAndStatusAndReserveExpiresAtAfter(
+            Long universityId,
+            Long organizationId,
+            Long userId,
+            RentalStatus status,
+            LocalDateTime now,
+            Pageable pageable
+    );
+
 }

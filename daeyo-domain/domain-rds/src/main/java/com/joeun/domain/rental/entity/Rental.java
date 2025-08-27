@@ -114,4 +114,11 @@ public class Rental {
         this.status = RentalStatus.EXPIRED;
         this.reserveExpiresAt = LocalDateTime.now();
     }
+    public void markReturned(LocalDateTime now) {
+        if (this.status == RentalStatus.RETURNED) return;            // idempotent
+        if (this.status != RentalStatus.RENTED)
+            throw new IllegalStateException("rental is not RENTED");
+        this.status = RentalStatus.RETURNED;
+        this.returnedAt = now;
+    }
 }
