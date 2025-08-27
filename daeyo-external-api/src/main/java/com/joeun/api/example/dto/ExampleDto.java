@@ -1,4 +1,6 @@
 package com.joeun.api.example.dto;
 
-public class ExampleDto {
+public record ExampleDto(
+        String key
+) {
 }
