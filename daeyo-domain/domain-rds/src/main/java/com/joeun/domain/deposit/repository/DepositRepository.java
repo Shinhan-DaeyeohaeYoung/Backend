@@ -5,6 +5,7 @@ import com.joeun.domain.deposit.types.DepositStatus;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,4 +27,15 @@ public interface DepositRepository extends JpaRepository<Deposit, Long> {
   List<Deposit> findByOrganization(@Param("orgId") Long orgId,
       @Param("hasStatuses") boolean hasStatuses,
       @Param("statuses") Collection<DepositStatus> statuses);
+
+  @Query("""
+      select d from Deposit d
+        left join fetch d.university u
+        left join fetch d.organization o
+        left join fetch d.user usr
+        left join fetch d.refundAccount ra
+      where d.id = :id
+      """)
+  Optional<Deposit> findByIdWithAllJoins(Long id);
+
 }

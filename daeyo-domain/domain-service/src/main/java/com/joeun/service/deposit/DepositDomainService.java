@@ -5,7 +5,6 @@ import com.joeun.domain.deposit.repository.DepositRepository;
 import com.joeun.domain.deposit.types.DepositStatus;
 import com.joeun.domain.organization.entity.Organization;
 import com.joeun.domain.organization.repository.OrganizationRepository;
-import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.university.entity.University;
 import com.joeun.domain.users.entity.User;
 import com.joeun.domain.users.repository.UserRepository;
@@ -13,6 +12,7 @@ import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
+import java.util.NoSuchElementException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -77,6 +77,41 @@ public class DepositDomainService {
     d.setRefundAccount(null);
 
     return depoRepo.save(d);
+  }
+
+  @Transactional
+  public Deposit getByIdOrThrow(Long id) {
+    return depoRepo.findById(id)
+        .orElseThrow(() -> new NoSuchElementException("deposit not found: " + id));
+  }
+
+  @Transactional
+  public Deposit getByIdWithAllJoinsOrThrow(Long id) {
+    return depoRepo.findByIdWithAllJoins(id)
+        .orElseThrow(() -> new NoSuchElementException("deposit not found: " + id));
+  }
+
+  @Transactional
+  public Deposit refundFull(Deposit deposit, Long actorUserId) {
+    if (deposit.getStatus() != DepositStatus.HELD) {
+      throw new IllegalStateException("invalid transition: " + deposit.getStatus() + " -> RELEASED");
+    }
+    if (deposit.getRefundAccount() == null) {
+      throw new IllegalStateException("refund account not set");
+    }
+
+    deposit.setStatus(DepositStatus.RELEASED);
+    // updatedAt 은 @UpdateTimestamp 등에 의해 자동 갱신된다고 가정
+    return depoRepo.save(deposit);
+  }
+
+  @Transactional
+  public Deposit forfeitFull(Deposit deposit, Long actorUserId) {
+    if (deposit.getStatus() != DepositStatus.HELD) {
+      throw new IllegalStateException("invalid transition: " + deposit.getStatus() + " -> FORFEITED");
+    }
+    deposit.setStatus(DepositStatus.FORFEITED);
+    return depoRepo.save(deposit);
   }
 
 }
