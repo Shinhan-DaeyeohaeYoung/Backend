@@ -168,4 +168,24 @@ public class AdminItemController {
                                                                @RequestBody AdminItemRegisterDtos.RegisterRequest req) {
         return orchestrator.registerWithUnits(req);
     }
+
+    @DeleteMapping("/{itemId}")
+    public Map<String, Object> deleteItem(@PathVariable Long itemId,
+                                          @RequestParam Long organizationId,
+                                          @AuthenticationPrincipal LoginUser loginUser) {
+        int unitsDeleted = app.deleteItemWithUnits(itemId, organizationId, loginUser);
+        return Map.of("id", itemId, "deleted", true, "unitsDeleted", unitsDeleted);
+    }
+
+    @DeleteMapping("/{itemId}/units/{assetNo}")
+    public Map<String, Object> deleteUnit(@PathVariable Long itemId,
+                                          @PathVariable String assetNo,
+                                          @RequestParam Long organizationId,
+                                          @AuthenticationPrincipal LoginUser loginUser) {
+        app.deleteUnit(itemId, assetNo, organizationId, loginUser);
+        return Map.of("itemId", itemId, "assetNo", assetNo, "deleted", true);
+    }
+
+
+
 }

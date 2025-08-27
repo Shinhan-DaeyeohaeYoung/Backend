@@ -18,8 +18,10 @@ import com.joeun.service.rental.RentalDomainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -281,4 +283,38 @@ public class ItemApplicationService {
                 p.getTakenAt() == null ? null : p.getTakenAt().toString()
         );
     }
+    public int deleteItemWithUnits(Long itemId, Long organizationId, LoginUser loginUser) {
+        if (loginUser == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+        var m = organizationService.getMyOrganization(loginUser, organizationId);
+        // 권한 체크 (관리자만)
+        var role = m.getRole();
+        if (role == null || !(role.equals("ORG_ADMIN") || role.equals("ADMIN"))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 조직의 관리자만 삭제할 수 있습니다.");
+        }
+
+        Long u = m.getUniversityId();
+        Long o = m.getOrganizationId();
+
+        return itemDomainService.deleteItemCascade(u, o, itemId);
+    }
+
+    public void deleteUnit(Long itemId, String assetNo, Long organizationId, LoginUser loginUser) {
+        if (loginUser == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다.");
+        }
+
+        var m = organizationService.getMyOrganization(loginUser, organizationId);
+        var role = m.getRole();
+        if (role == null || !(role.equals("ORG_ADMIN") || role.equals("ADMIN"))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 조직의 관리자만 유닛을 삭제할 수 있습니다.");
+        }
+
+        Long u = m.getUniversityId();
+        Long o = m.getOrganizationId();
+
+        itemDomainService.deleteUnitByAssetNo(u, o, itemId, assetNo);
+    }
+
 }
