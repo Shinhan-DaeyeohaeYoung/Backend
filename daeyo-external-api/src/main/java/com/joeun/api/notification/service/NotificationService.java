@@ -13,13 +13,17 @@ import com.joeun.service.notification.NotiUserDomainService;
 import com.joeun.service.notification.NotificationDomainService;
 import com.joeun.service.user.UserDomainService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NotificationService {
 
     private final NotificationDomainService notificationDomainService;
@@ -27,7 +31,7 @@ public class NotificationService {
     private final NotiUserDomainService notiUserDomainService;
     private final UserDomainService userDomainService;
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void sendNotification(NotificationRequest request) {
         NotiType notiType = request.notiType();
         Long userId = request.userId();
@@ -52,7 +56,7 @@ public class NotificationService {
             notificationInfraService.sendNotification(notification, notiUser);
             notificationDomainService.saveNotification(notification);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to send notification", e);
+            log.error("Failed to send notification to userId {}: {}", userId, e);
         }
     }
 

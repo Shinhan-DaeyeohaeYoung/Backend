@@ -20,7 +20,7 @@ public interface WaitlistRepository extends JpaRepository<Waitlist, Long> {
       LIMIT 1
       FOR UPDATE SKIP LOCKED
     """, nativeQuery = true)
-    Optional<Waitlist> findByItemIdAndStatusWAITINGOne(Long itemId);
+    Optional<Waitlist> findByItemIdAndStatusWAITINGOne(@Param("itemId") Long itemId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
@@ -47,4 +47,7 @@ public interface WaitlistRepository extends JpaRepository<Waitlist, Long> {
        and w.notifiedAt is null
   """)
     int markNotifiedIfOffered(@Param("id") Long id, @Param("now") LocalDateTime now);
+
+    @Query(value = "SELECT * FROM waitlist WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Optional<Waitlist> findByIdForUpdate(@Param("id") Long id);
 }

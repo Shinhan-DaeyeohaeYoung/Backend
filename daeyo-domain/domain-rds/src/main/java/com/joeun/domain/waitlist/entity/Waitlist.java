@@ -62,6 +62,16 @@ public class Waitlist {
 
     public void markNotified(LocalDateTime now) {
         this.status = WaitlistStatus.NOTIFIED;
-        this.joinedAt = now;
+        this.notifiedAt = now;
+    }
+
+    public void offer(LocalDateTime offeredAt) {
+        this.status = WaitlistStatus.OFFERED;
+        this.offeredAt = offeredAt;
+        this.offerExpiresAt = offeredAt.plusMinutes(30);
+    }
+
+    public void markFulfilled() {
+        this.status = WaitlistStatus.FULFILLED;
     }
 }

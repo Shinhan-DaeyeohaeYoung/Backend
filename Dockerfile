@@ -23,4 +23,4 @@ WORKDIR /app
 ARG JAR=daeyo-external-api/build/libs/daeyo-external-api-0.0.1-SNAPSHOT.jar
 COPY --from=builder /app/${JAR} app.jar
 
-ENTRYPOINT ["java","-Dspring.profiles.active=prod","-jar","app.jar"]
+ENTRYPOINT ["java","-jar","app.jar"]

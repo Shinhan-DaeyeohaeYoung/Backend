@@ -23,4 +23,8 @@ public class WaitlistRdsService {
     public Optional<Waitlist> getNextOutstandingWaitlist(Long itemId) {
         return waitlistRepository.findByItemIdAndStatusWAITINGOne(itemId);
     }
+
+    public Optional<Waitlist> findByIdForUpdate(Long waitlistId) {
+        return waitlistRepository.findByIdForUpdate(waitlistId);
+    }
 }
