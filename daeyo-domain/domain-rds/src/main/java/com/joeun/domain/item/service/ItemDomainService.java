@@ -18,6 +18,8 @@ public class ItemDomainService {
 
     /* ===== 아이템 ////// */
 
+
+
     @Transactional
     public Item createItem(Long u, Long o, String name, String desc, Long deposit, Integer maxDays, Boolean active) {
         Item item = Item.builder()
@@ -138,6 +140,11 @@ public class ItemDomainService {
             item.increaseStock(1);
         }
         // totalQuantity는 상태 변경으로는 변하지 않음(유닛 추가/삭제시에만 변경)
+    }
+    @Transactional(readOnly = true)
+    public Page<Item> listActive(Long actorUserId, Set<Long> orgIds, Pageable pageable) {
+        // 조회 자체는 orgIds 기준으로 수행
+        return itemRepository.findAllByOrganizationIdInAndIsActiveTrue(orgIds, pageable);
     }
 
 }

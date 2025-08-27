@@ -27,7 +27,7 @@ qr:
   size: "${QR_SIZE:320}"
   scan-url: "${QR_SCAN_URL:http://localhost:5173/scan}"  # 스캔 후 프론트 라우트 (컨트롤러에서 쓰면)
   jwt:
-    secret: "${QR_JWT_SECRET:please-set-64+chars-secret}"
+    secret: "${QR_JWT_SECRET:pzoqKvM8se1GRsNgMdak9Bb7qcZeVGJ0beBe9pvIen0=}"
     default-ttl-seconds: "${QR_JWT_DEFAULT_TTL:180}"       # QrService @Value 와 일치!
 
 openai:

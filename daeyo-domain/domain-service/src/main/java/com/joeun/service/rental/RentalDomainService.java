@@ -38,6 +38,11 @@ public class RentalDomainService {
     private final ReservationRedisService reservationRedisService;
     private final ApplicationEventPublisher eventPublisher;
 
+    @Transactional(readOnly = true)
+    public Rental getById(Long id) {
+        return rentalRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("rental not found: id=" + id));
+    }
     /** 1) 예약 생성: IndividualItem → RESERVED, Rental(RESERVED) 생성 */
     @Transactional(rollbackFor = Exception.class)
     public Long reserveUnit(Long u, Long o, Long userId, Long itemId, Long unitId, int ttlMinutes) {

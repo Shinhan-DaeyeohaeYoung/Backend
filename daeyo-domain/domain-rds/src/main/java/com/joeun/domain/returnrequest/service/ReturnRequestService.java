@@ -152,19 +152,6 @@ public class ReturnRequestService {
     // 조직 ID를 모르는 유저 취소 케이스용(테넌트 테이블 구조에 맞춰 수정 가능)
     private Long getOrgIdOrZero() { return 0L; }
 
-//    /* ================== 손상률/제안 (GPT) ================== */
-//    @Transactional(readOnly = true)
-//    public DamageSuggestionResult getDamageSuggestions(Long universityId, Long id, Long actorUserIdOrNull) {
-//        ReturnRequest rr = returnRequestRepository.findById(id)
-//                .orElseThrow(() -> new EntityNotFoundException("ReturnRequest not found"));
-//        // 권한 체크(관리자 or 본인): 필요 시 보강.
-//
-//        // 기존 사진(대여 당시 사진) & 반납 사진(제출 이미지)을 준비
-//        String beforeImageKey = extractBeforeImageKey(rr); // rental/item/unit 등에서 꺼내는 로직 구현
-//        String afterImageKey  = rr.getSubmittedImageKey();
-//
-//        return damageService.assessDamage(beforeImageKey, afterImageKey, rr.getUniversityId(), rr.getOrganizationId(), rr.getId());
-//    }
 
     //반납 전에 원래 등록돼 있던 사진키 불러오기
     private String extractBeforeImageKey(ReturnRequest rr) {

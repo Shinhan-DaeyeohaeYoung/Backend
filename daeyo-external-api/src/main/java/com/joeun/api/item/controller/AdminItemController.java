@@ -6,6 +6,7 @@ import com.joeun.api.item.dto.PageResponse;
 import com.joeun.api.item.dto.UnitPhotoDtos;
 import com.joeun.api.item.service.AdminItemOrchestrator;
 import com.joeun.api.item.service.ItemApplicationService;
+import com.joeun.global.config.LoginUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springdoc.core.converters.models.PageableAsQueryParam;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -46,9 +48,10 @@ public class AdminItemController {
     @PageableAsQueryParam
     @PostMapping("/{itemId}/units/{assetNo}/photo")
     public Map<String, Object> upsertUnitPhoto(@PathVariable Long itemId,
+                                               @AuthenticationPrincipal LoginUser loginUser,
                                                @PathVariable String assetNo,
                                                @RequestBody UnitPhotoDtos.UpsertRequest req) {
-        Long photoId = app.upsertUnitPhoto(itemId, assetNo, req);
+        Long photoId = app.upsertUnitPhoto(itemId, assetNo, req,loginUser);
         return Map.of("id", photoId, "replaced", true);
     }
 
@@ -70,8 +73,9 @@ public class AdminItemController {
     @GetMapping
     public PageResponse<ItemDtos.ItemSummaryResponse> adminList(
             @Parameter(hidden = true)
+            @AuthenticationPrincipal LoginUser loginUser,
             @PageableDefault(size = 20, sort = "id") Pageable pageable) {
-        return PageResponse.from(app.listForUser(pageable));
+        return PageResponse.from(app.listForUser(loginUser,pageable));
     }
 
     /** 아이템 생성 (Admin DTO 사용) */
@@ -86,8 +90,10 @@ public class AdminItemController {
     })
     @PageableAsQueryParam
     @PostMapping
-    public Map<String, Long> create(@RequestBody AdminItemRegisterDtos.ItemCreateRequest req) {
-        return Map.of("id", app.createItem(req));
+    public Map<String, Long> create(@RequestBody AdminItemRegisterDtos.ItemCreateRequest req,
+                                    @AuthenticationPrincipal LoginUser loginUser
+                                    ) {
+        return Map.of("id", app.createItem(req,loginUser));
     }
 
     /** 아이템 수정 (Admin DTO 사용) */
@@ -103,8 +109,11 @@ public class AdminItemController {
     })
     @PageableAsQueryParam
     @PatchMapping("/{itemId}")
-    public Map<String, Object> patch(@PathVariable Long itemId, @RequestBody AdminItemRegisterDtos.ItemPatchRequest req) {
-        app.patchItem(itemId, req);
+    public Map<String, Object> patch(@PathVariable Long itemId,
+                                     @RequestBody AdminItemRegisterDtos.ItemPatchRequest req,
+                                     @AuthenticationPrincipal LoginUser loginUser
+                                     ) {
+        app.patchItem(itemId, req,loginUser);
         return Map.of("id", itemId, "patched", true);
     }
 
@@ -121,8 +130,9 @@ public class AdminItemController {
     @GetMapping("/{itemId}")
     public ItemDtos.ItemDetailResponse adminDetail(@PathVariable Long itemId,
                                                    @Parameter(hidden = true)
+                                                   @AuthenticationPrincipal LoginUser loginUser,
                                                    @PageableDefault(size = 50, sort = "id") Pageable pageable) {
-        return app.getItemDetail(itemId, pageable, true, true);
+        return app.getItemDetailForAdmin(itemId, pageable, true, true,loginUser);
     }
 
 
@@ -137,9 +147,10 @@ public class AdminItemController {
     @PostMapping("/{itemId}/units")
     public Map<String, Object> createUnits(
             @PathVariable Long itemId,
+            @AuthenticationPrincipal LoginUser loginUser,
             @org.springframework.web.bind.annotation.RequestBody AdminItemRegisterDtos.UnitBatchCreateRequest req
     ) {
-        return app.createUnits(itemId, req);
+        return app.createUnits(itemId, req,loginUser);
     }
 
     /** (선택) 아이템 + 유닛 한번에 등록 */

@@ -10,11 +10,10 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AdminItemOrchestrator {
     private final ItemDomainService itemDomainService;
-    private final TenantProvider tenant;
 
     public RegisterResponse registerWithUnits(RegisterRequest req) {
-        Long u = req.universityId() != null ? req.universityId() : tenant.universityId();
-        Long o = req.organizationId() != null ? req.organizationId() : tenant.organizationId();
+        Long u = req.universityId() ;
+        Long o = req.organizationId();
 
         var item = itemDomainService.createItem(u, o, req.name(), req.description(), req.deposit(), req.maxRentalDays(), true);
         var unitInputs = req.units().stream()

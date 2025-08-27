@@ -4,6 +4,7 @@ import com.joeun.api.item.dto.PageResponse;
 import com.joeun.api.rental.dto.RentalDtos;
 import com.joeun.api.rental.dto.RentalDtos.*;
 import com.joeun.api.rental.service.RentalApplicationService;
+import com.joeun.global.config.LoginUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -58,9 +60,9 @@ public class RentalController {
             @ApiResponse(responseCode = "404", description = "아이템/유닛 없음")
     })
     @PostMapping("/rental-requests/reservations")
-    public ReserveResponse reserve(@RequestBody ReserveRequest req) {
-        Long userId = 1L; // 임시
-        return app.reserve(userId, req);
+    public ReserveResponse reserve(@RequestBody ReserveRequest req,
+                                   @AuthenticationPrincipal LoginUser loginUser) {
+        return app.reserve(loginUser, req);
     }
 
     // 2) 내 대여 신청(예약) 내역 (만료 전, 대여 확정 전)
@@ -99,10 +101,10 @@ public class RentalController {
     })
     @GetMapping("/rental-requests")
     public PageResponse<ReservationSummary> myReservations(
+            @AuthenticationPrincipal LoginUser loginUser,
             @Parameter(hidden = true)
             @PageableDefault(size = 20, sort = "reservedAt") Pageable pageable) {
-        Long userId = 1L;
-        return PageResponse.from(app.listMyReservations(userId, pageable));
+        return PageResponse.from(app.listMyReservations(loginUser, pageable));
     }
 
     // 3) 홀딩 물품 대여 가능 확인
@@ -121,9 +123,10 @@ public class RentalController {
             @ApiResponse(responseCode = "404", description = "예약 없음(권한 또는 ID 오류)")
     })
     @GetMapping("/rental-requests/{id}/possible")
-    public Map<String, Object> possible(@PathVariable Long id) {
-        Long userId = 1L;
-        boolean ok = app.possible(userId, id);
+    public Map<String, Object> possible(@PathVariable Long id,
+                                        @AuthenticationPrincipal LoginUser loginUser
+                                        ) {
+        boolean ok = app.possible(loginUser, id);
         return Map.of("id", id, "possible", ok);
     }
 
@@ -154,9 +157,10 @@ public class RentalController {
             @ApiResponse(responseCode = "404", description = "예약 없음")
     })
     @PostMapping("/rental-requests/{id}/approve")
-    public RentalDtos.ApproveResponse approve(@PathVariable Long id) {
-        Long userId = 1L;
-        return app.approve(userId, id);
+    public RentalDtos.ApproveResponse approve(@PathVariable Long id,
+                                              @AuthenticationPrincipal LoginUser loginUser
+    ) {
+        return app.approve(loginUser, id);
     }
 
     // 5) 대여 신청 취소(RESERVED→CANCELLED)
@@ -174,9 +178,10 @@ public class RentalController {
             @ApiResponse(responseCode = "404", description = "예약 없음")
     })
     @PatchMapping("/rental-requests/{id}/cancel")
-    public Map<String, Object> cancel(@PathVariable Long id) {
-        Long userId = 1L;
-        app.cancel(userId, id);
+    public Map<String, Object> cancel(@PathVariable Long id,
+                                      @AuthenticationPrincipal LoginUser loginUser
+    ) {
+        app.cancel(loginUser, id);
         return Map.of("id", id, "cancelled", true);
     }
 
@@ -228,6 +233,8 @@ public class RentalController {
     })
     @GetMapping("/rentals")
     public PageResponse<RentalHistoryItem> myRentalHistory(
+            @AuthenticationPrincipal LoginUser loginUser,
+
             @Parameter(description = "상태 필터(콤마 구분). 예: RENTED,RETURNED. 미지정 시 모두")
             @RequestParam(required = false) String status,
 
@@ -243,9 +250,8 @@ public class RentalController {
             @Parameter(hidden = true)
             @PageableDefault(size = 20, sort = "rentedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Long userId = 1L;
         return PageResponse.from(
-                app.listMyRentalHistory(userId, status, from, to, includeExpiredReservations, pageable)
+                app.listMyRentalHistory(loginUser, status, from, to, includeExpiredReservations, pageable)
         );
     }
 
@@ -291,11 +297,11 @@ public class RentalController {
     })
     @GetMapping("/rentals/myitems")
     public PageResponse<RentalDtos.CurrentRentalItem> myCurrentRentals(
+            @AuthenticationPrincipal LoginUser loginUser,
             @PageableDefault(size = 20, sort = "rentedAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
-        Long userId = 1L;
-        return PageResponse.from(app.listMyCurrentRentals(userId, pageable));
+        return PageResponse.from(app.listMyCurrentRentals(loginUser, pageable));
     }
 
     @Operation(
@@ -304,13 +310,13 @@ public class RentalController {
     )
     @GetMapping("/rental-requests/{organizationId}/holding")
     public PageResponse<RentalDtos.ReservationSummary> myOrgReservations(
+            @AuthenticationPrincipal LoginUser loginUser,
             @PathVariable Long organizationId,
             @Parameter(hidden = true)
             @PageableDefault(size = 20, sort = "reservedAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
-        Long userId = 1L; // TODO: 인증 연동 시 교체
-        return PageResponse.from(app.listMyReservationsByOrganization(userId, organizationId, pageable));
+        return PageResponse.from(app.listMyReservationsByOrganization(loginUser, organizationId, pageable));
     }
     @Operation(
             summary = "내 대여중(REN​TED) 목록 - 특정 조직만",
@@ -318,13 +324,13 @@ public class RentalController {
     )
     @GetMapping("/rentals/organizations/{organizationId}")
     public PageResponse<RentalDtos.CurrentRentalItem> myCurrentRentalsByOrg(
+            @AuthenticationPrincipal LoginUser loginUser,
             @PathVariable Long organizationId,
             @Parameter(hidden = true)
             @PageableDefault(size = 20, sort = "rentedAt", direction = Sort.Direction.DESC)
             Pageable pageable
     ) {
-        Long userId = 1L; // TODO: 인증 연동 시 교체
-        return PageResponse.from(app.listMyCurrentRentalsByOrganization(userId, organizationId, pageable));
+        return PageResponse.from(app.listMyCurrentRentalsByOrganization(loginUser, organizationId, pageable));
     }
 
 
