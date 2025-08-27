@@ -11,6 +11,7 @@ import com.joeun.domain.students.entity.StudentOrgAffiliation;
 import com.joeun.domain.students.types.SignupStatus;
 import com.joeun.domain.users.entity.User;
 import com.joeun.domain.users.entity.UserOrgMembership;
+import com.joeun.global.util.AccountCipher;
 import com.joeun.service.students.AffiliationDomainService;
 import com.joeun.service.students.StudentDomainService;
 import com.joeun.service.user.UserDomainService;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class StudentService {
 
+  private final AccountCipher accountCipher;
   private final UserDomainService userDomainService;
   private final StudentDomainService studentDomainService;
   private final PasswordEncoder passwordEncoder;
@@ -98,14 +100,34 @@ public class StudentService {
     // 4) User 생성
     User u = userDomainService.createFromStudent(s); // name/email/university/studentNo/passwordHash 복사
 
-    // 5) affiliation 이관 → membership
+    // 5.9) affiliation 이관 → membership
     List<StudentOrgAffiliation> affs = affiliationDomainService.findAllByStudentId(s.getId());
     List<UserOrgMembership> memberships = affiliationDomainService.migrateToUserMemberships(u, affs);
 
-    // 6) 학생 상태 변경
+    String digitsOnly = req.accountNo().replaceAll("\\D", "");
+    if (digitsOnly.length() < 6 || digitsOnly.length() > 30) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid account number length");
+    }
+
+    String masked = accountCipher.mask(digitsOnly);
+    byte[] encrypted = accountCipher.encrypt(digitsOnly);
+
+    // 첫 계좌는 자동 primary, 혹은 요청에서 명시(primaryFlag) 가능하도록
+    Boolean primaryFlag = null; // 필요하면 req에서 받아와 세팅
+    userDomainService.addBankAccountPrepared(
+        u,
+        req.bankCode(),
+        req.bankName(),          // nullable OK
+        req.accountHolderName(),
+        masked,
+        encrypted,
+        primaryFlag
+    );
+
+    // 7) 학생 상태 변경
     studentDomainService.markRegistered(s);
 
-    // 7) 응답 구성
+    // 8) 응답 구성 (계좌는 마스킹만 노출)
     var userDto = new StudentSignupResponse.UserDto(
         u.getId(), u.getUniversity().getId(), u.getName(), u.getEmail(), u.getStudentId(), u.getRole()
     );
@@ -113,7 +135,12 @@ public class StudentService {
         .map(m -> new UserMembershipDto(m.getOrganization().getId(), m.getRole().name()))
         .toList();
 
-    return new StudentSignupResponse(userDto, memDtos);
+    // 필요 시 응답에 계좌 요약 포함(마스킹만)
+    var bankDto = new StudentSignupResponse.BankAccountDto(
+        masked, req.bankCode(), req.bankName(), true, false  // 첫 계좌면 primary=true, 최초 isVerified=false
+    );
+
+    return new StudentSignupResponse(userDto, memDtos, bankDto);
   }
 
 }

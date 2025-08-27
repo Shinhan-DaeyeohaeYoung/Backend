@@ -25,7 +25,8 @@ import java.time.LocalDateTime;
 public class UserOrgMembership {
 
   @EmbeddedId
-  private UserOrgMembershipId id;
+  @Builder.Default
+  private UserOrgMembershipId id = new UserOrgMembershipId();
 
   @MapsId("userId")
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
