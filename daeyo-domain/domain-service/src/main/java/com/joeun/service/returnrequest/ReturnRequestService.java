@@ -1,10 +1,12 @@
 package com.joeun.service.returnrequest;
 
+import com.joeun.domain.item.entity.IndividualItem;
 import com.joeun.domain.item.repository.IndividualItemRepository;
 import com.joeun.domain.item.repository.UnitPhotoRepository;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.rental.entity.RentalStatus;
 import com.joeun.domain.rental.repository.RentalRepository;
+import com.joeun.domain.reservation.service.ReservationRedisService;
 import com.joeun.domain.returnrequest.entity.ReturnRequest;
 import com.joeun.domain.returnrequest.entity.ReturnRequestStatus;
 import com.joeun.domain.returnrequest.repository.ReturnRequestRepository;
@@ -35,6 +37,7 @@ public class ReturnRequestService {
     private final IndividualItemRepository individualItemRepository;
     private final WaitlistDomainService waitlistDomainService;
     private final RentalDomainService rentalDomainService;
+    private final ReservationRedisService reservationRedisService;
 
 
     /* ================== 조회 (관리자) ================== */
@@ -96,35 +99,40 @@ public class ReturnRequestService {
     /* ================== 승인 (관리자) ================== */
     @Transactional
     public ReturnRequest approve(Long approverUserId, Long id) {
-        // 그냥 임의 값 고정
         Long u = 1L;
         Long o = 2L;
 
-        // 1) 반납 신청 건 가져오기
         ReturnRequest rr = returnRequestRepository.lockByIdAndTenant(id, u, o)
                 .orElseThrow(() -> new NoSuchElementException(
                         "returnRequest not found: id=%d, univ=%d, org=%d".formatted(id, u, o)));
 
-        // 2) 승인 처리
-        rr.approve(approverUserId, LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        rr.approve(approverUserId, now);
 
         this.markRentalReturnedByReturnApproval(u, o, rr.getRental().getId(), approverUserId);
 
-        // 2-1) 대기열 존재 시 대기열 유저 할당
-        Optional<Waitlist> waitlist = waitlistDomainService.getNextOutstandingWaitlist(rr.getRental().getItem().getId());
+        Long unitId = rr.getRental().getUnit().getId();
+        IndividualItem unit = individualItemRepository.findById(unitId)
+                .orElseThrow(() -> new NoSuchElementException("unit not found: id=" + unitId));
 
-        if(waitlist.isPresent()){
-            Waitlist w = waitlist.get();
-            waitlistDomainService.markNotified(w.getId(), LocalDateTime.now());
+        reservationRedisService.revertReserve(unitId, rr.getRental().getOfferToken());
+
+        Optional<Waitlist> next = waitlistDomainService.getNextOutstandingWaitlist(rr.getRental().getItem().getId());
+        if (next.isPresent()) {
+            Waitlist w = next.get();
+
+            unit.markWaitReserved();
+
+            waitlistDomainService.offerReserveAndNotify(
+                    w.getId(), now, unitId, u, o
+            );
+
+            w.markFulfilled();
             return rr;
         }
 
-        // 3) 개별 상품 AVAILABLE 처리
-        Long unitId = rr.getRental().getUnit().getId();
-        var unit = individualItemRepository.findById(unitId)
-                .orElseThrow(() -> new NoSuchElementException("unit not found: id=" + unitId));
         unit.markAvailable();
-
+        unit.getItem().returnOne();
         return rr;
     }
 

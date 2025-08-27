@@ -46,7 +46,9 @@ public interface IndividualItemRepository extends  JpaRepository<IndividualItem,
         and u.item.universityId = :u
         and u.item.organizationId = :o
       """)
-    Optional<IndividualItem> findByIdAndTenant(Long u, Long o, Long unitId);
+    Optional<IndividualItem> findByIdAndTenant(@Param("u") Long universityId,
+                                               @Param("o") Long organizationId,
+                                               @Param("unitId") Long unitId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
@@ -67,4 +69,38 @@ public interface IndividualItemRepository extends  JpaRepository<IndividualItem,
           AND status = 'RESERVED'
         """, nativeQuery = true)
     int bulkMakeAvailable(@Param("unitIds") List<Long> unitIds);
+
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        update IndividualItem u
+           set u.status = :toStatus
+         where u.id = :unitId
+           and u.status in (com.joeun.domain.item.entity.IndividualItemStatus.AVAILABLE,
+                            com.joeun.domain.item.entity.IndividualItemStatus.WAIT_RESERVED)
+    """)
+    int updateStatusIfAvailOrWaitReserved(@Param("unitId") Long unitId,
+                                          @Param("toStatus") IndividualItemStatus toStatus);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+        UPDATE individual_item u
+        JOIN item i ON i.id = u.item_id
+           SET u.status = 'RESERVED',
+               i.available_quantity = i.available_quantity - 1
+         WHERE u.id = :unitId
+           AND u.status = 'AVAILABLE'
+           AND i.available_quantity > 0
+        """, nativeQuery = true)
+    int reserveFromAvailableAndDecrement(@Param("unitId") Long unitId);
+
+    // WAIT_RESERVED → RESERVED 전환 (수량 변화 없음)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+        UPDATE individual_item u
+           SET u.status = 'RESERVED'
+         WHERE u.id = :unitId
+           AND u.status = 'WAIT_RESERVED'
+        """, nativeQuery = true)
+    int reserveFromWaitReservedNoChange(@Param("unitId") Long unitId);
 }
