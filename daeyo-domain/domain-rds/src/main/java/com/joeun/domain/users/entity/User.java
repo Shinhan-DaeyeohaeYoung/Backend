@@ -67,12 +67,6 @@ public class User {
   @Column(name = "updated_at", nullable = false)
   private LocalDateTime updatedAt;
 
-  /* ===== 연관관계(양방향 컬렉션) =====
-     아래 엔티티들은 추후 생성 예정:
-     - UserOrgMembership, Rental, Penalty, Deposit, UserBankAccount,
-       WaitlistEntry, Holding, ReturnRequest, ItemRequest
-     mappedBy 값은 상대 엔티티의 필드명과 일치해야 함.
-  */
   @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = false, fetch = FetchType.LAZY)
   private List<UserOrgMembership> memberships = new ArrayList<>();
 
@@ -99,4 +93,5 @@ public class User {
   private List<ItemRequest> itemRequests = new ArrayList<>();
 
  */
+
 }
