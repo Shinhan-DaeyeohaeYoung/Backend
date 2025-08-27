@@ -41,3 +41,8 @@ file:
     bucket: dummy
     region: ap-northeast-2
     publicBaseUrl: ""
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG

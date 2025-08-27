@@ -1,9 +1,12 @@
 package com.joeun.domain.organization.entity;
 
+import com.joeun.domain.deposit.entity.Deposit;
 import com.joeun.domain.organization.types.OrganizationType;
 import com.joeun.domain.university.entity.University;
 import com.joeun.domain.users.entity.UserOrgMembership;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
@@ -23,6 +26,8 @@ import java.util.List;
 )
 @Data
 @NoArgsConstructor
+@Builder
+@AllArgsConstructor
 public class Organization {
 
   @Id
@@ -73,6 +78,9 @@ public class Organization {
   @OneToMany(mappedBy = "organization", fetch = FetchType.LAZY)
   private List<UserOrgMembership> memberships = new ArrayList<>();
 
+  @OneToMany(mappedBy = "organization", fetch = FetchType.LAZY)
+  private List<Deposit> deposits = new ArrayList<>();
+
   /*
   @OneToMany(mappedBy = "organization", fetch = FetchType.LAZY)
   private List<Item> items = new ArrayList<>();
@@ -86,8 +94,6 @@ public class Organization {
   @OneToMany(mappedBy = "organization", fetch = FetchType.LAZY)
   private List<ReturnPhoto> returnPhotos = new ArrayList<>();
 
-  @OneToMany(mappedBy = "organization", fetch = FetchType.LAZY)
-  private List<Deposit> deposits = new ArrayList<>();
 
   @OneToMany(mappedBy = "organization", fetch = FetchType.LAZY)
   private List<ReturnRequest> returnRequests = new ArrayList<>();

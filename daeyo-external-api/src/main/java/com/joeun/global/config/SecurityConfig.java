@@ -56,7 +56,13 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/api/universities", "/api/universities/**").permitAll()
             // 회원가입 / 로그인 허용
             .requestMatchers("/api/users/**").permitAll()
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**","/swagger-ui.html").permitAll()
+            .requestMatchers("/api/organizations/**").permitAll()
+            .requestMatchers("/api/deposits/**").permitAll()
+
+
+            .requestMatchers("/error").permitAll()
+            .requestMatchers("/swagger-ui/**", "/v3/api-docs/**","/swagger-ui.html").permitAll()
+
             .anyRequest().authenticated()
         )
         // 폼 로그인/로그아웃은 API라면 비활성
@@ -64,7 +70,7 @@ public class SecurityConfig {
         .logout(AbstractHttpConfigurer::disable)
 
         // (임시) httpBasic는 유지하거나 필요 없으면 disable도 가능
-        .httpBasic(Customizer.withDefaults());
+        .httpBasic(AbstractHttpConfigurer::disable);
 
     http.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
