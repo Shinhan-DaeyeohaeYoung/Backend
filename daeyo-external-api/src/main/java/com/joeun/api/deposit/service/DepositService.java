@@ -10,12 +10,16 @@ import com.joeun.api.deposit.dto.DepositListDto;
 import com.joeun.api.deposit.dto.DepositListResult;
 import com.joeun.api.deposit.dto.DepositRefundResponse;
 import com.joeun.api.deposit.dto.DepositResponse;
+import com.joeun.api.deposit.dto.OrgDepositResponse;
 import com.joeun.api.deposit.mapper.DepositMappers;
 import com.joeun.domain.deposit.entity.Deposit;
+import com.joeun.domain.deposit.types.DepositEventType;
 import com.joeun.domain.deposit.types.DepositStatus;
 import com.joeun.domain.users.types.UserOrgRole;
 import com.joeun.global.config.LoginUser;
 import com.joeun.service.deposit.DepositDomainService;
+import com.joeun.service.deposit.DepositEventView;
+import com.joeun.service.deposit.OrgDepositEventView;
 import com.joeun.service.organization.OrganizationDomainService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -40,28 +44,30 @@ public class DepositService {
   private final DepositDomainService depositDomainService;
   private final OrganizationDomainService orgDomainService;
 
-  public DepositListResult searchMyDepositsSimple(Long userId, String status, int page, int size) {
-    DepositStatus statusEnum = parseStatus(status);
-    var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+  public List<DepositResponse> listMyDepositHistory(Long userId, String statusText) {
+    final DepositEventType filter = parseStatus(statusText);
+    List<DepositEventView> views = depositDomainService.findUserDepositEventViews(userId, filter);
 
-    var resultPage = depositDomainService.searchUserDepositsSimple(userId, statusEnum, pageable);
-
-    List<DepositResponse> content = resultPage.getContent().stream()
-        .map(DepositResponse::from)
+    return views.stream()
+        .map(v -> DepositResponse.from(
+            v.eventId(), v.amount(), v.eventType(), v.occurredAt(), v.organizationName()
+        ))
         .toList();
-
-    return new DepositListResult(content, resultPage.getTotalElements());
   }
 
-  private DepositStatus parseStatus(String status) {
-    if (status == null || status.isBlank()) return null;
-    try {
-      return DepositStatus.valueOf(status.trim().toUpperCase()); // HELD/RELEASED/FORFEITED
-    } catch (IllegalArgumentException e) {
-      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid status: " + status);
-    }
+  // ---- helpers ----
+  private DepositEventType parseStatus(String s) {
+    if (s == null || s.isBlank()) return null;
+    String u = s.trim().toUpperCase();
+    return switch (u) {
+      case "예치", "CREATED"   -> DepositEventType.CREATED;
+      case "환불", "REFUNDED"  -> DepositEventType.REFUNDED;
+      case "몰수", "FORFEITED" -> DepositEventType.FORFEITED;
+      default -> null; // 알 수 없는 입력은 필터 미적용(전체)
+    };
   }
 
+/*
   public List<DepositListDto> listOrganizationDeposits(
       LoginUser loginUser, Long orgId, Set<DepositStatus> statuses) {
 
@@ -79,6 +85,29 @@ public class DepositService {
       dtos.add(DepositMappers.toListDto(d));
     }
     return dtos;
+  }*/
+
+  public List<OrgDepositResponse> listOrganizationDepositHistory(LoginUser actor,
+      Long orgId,
+      String statusText) {
+    // 1) 권한 확인: 조직 관리자만 허용(정책에 맞게 조정)
+    boolean isAdmin = orgDomainService.existsByUserOrgAndRole(actor.id(), orgId, UserOrgRole.ORG_ADMIN);
+    if (!isAdmin) {
+      throw new ResponseStatusException(HttpStatus.FORBIDDEN, "org admin required");
+    }
+
+    // 2) 상태 필터 파싱 (사용자 관점과 동일 로직 재사용)
+    DepositEventType filter = parseStatus(statusText);
+
+    // 3) 도메인 서비스 조회 (스칼라 read model)
+    List<OrgDepositEventView> views = depositDomainService.findOrganizationDepositEventViews(orgId, filter);
+
+    // 4) API DTO 매핑
+    return views.stream()
+        .map(v -> OrgDepositResponse.from(
+            v.eventId(), v.amount(), v.eventType(), v.occurredAt(), v.userName()
+        ))
+        .toList();
   }
 
   public DepositCreateResponse createDeposit(
