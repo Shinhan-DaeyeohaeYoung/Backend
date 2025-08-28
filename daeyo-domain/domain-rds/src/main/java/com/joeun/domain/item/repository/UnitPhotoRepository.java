@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UnitPhotoRepository extends JpaRepository<UnitPhoto, Long> {
+
     @Query("select up from UnitPhoto up where up.unit.id = :unitId")
     Optional<UnitPhoto> findByUnitId(@Param("unitId") Long unitId);
     // 개별상품(Unit) PK로 조회: unit.id 경로는 _Id 로 표현

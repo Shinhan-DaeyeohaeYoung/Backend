@@ -20,6 +20,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -311,15 +312,17 @@ public class RentalController {
             description = "현재 사용자(userId)의 RESERVED 상태이면서 만료 전이고, 전달한 organizationId에 속한 예약만 페이지로 반환합니다."
     )
     @GetMapping("/rental-requests/{organizationId}/holding")
-    public PageResponse<RentalDtos.ReservationSummary> myOrgReservations(
+    public List<UnitReservationDetail> myOrgReservations(
             @AuthenticationPrincipal LoginUser loginUser,
             @PathVariable Long organizationId,
             @Parameter(hidden = true)
             @PageableDefault(size = 20, sort = "reservedAt", direction = Sort.Direction.DESC)
-            Pageable pageable
+            Pageable pageable // 현재 구현은 리스트로 반환하므로 페이지네이션 파라미터는 전달만 함(미사용)
     ) {
-        return PageResponse.from(app.listMyReservationsByOrganization(loginUser, organizationId, pageable));
+        return app.listMyReservationsByOrganization(loginUser, organizationId, pageable);
     }
+
+
     @Operation(
             summary = "내 대여중(REN​TED) 목록 - 특정 조직만",
             description = "현재 사용자(userId)가 RENTED 상태이며 아직 반납되지 않은 대여 중, 전달한 organizationId에 속한 것만 페이지로 반환합니다."

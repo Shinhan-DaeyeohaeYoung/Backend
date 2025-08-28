@@ -10,14 +10,17 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 public interface IndividualItemRepository extends  JpaRepository<IndividualItem, Long> {
     Page<IndividualItem> findAllByItem(Item item, Pageable pageable);
+
     long countByItemAndStatus(Item item, IndividualItemStatus status);
 
     boolean existsByItemAndAssetNo(Item item, String assetNo);
+
     Optional<IndividualItem> findByItemAndAssetNo(Item item, String assetNo);
 
     long countByItem(Item item);
@@ -32,7 +35,7 @@ public interface IndividualItemRepository extends  JpaRepository<IndividualItem,
     @Query("""
 
             select u from IndividualItem u
-      where u.id = :unitId
+            where u.id = :unitId
         and u.item.universityId = :u
         and u.item.organizationId = :o
       """)
@@ -41,7 +44,8 @@ public interface IndividualItemRepository extends  JpaRepository<IndividualItem,
                                                @Param("unitId") Long unitId);
 
     @Query("""
-      select u from IndividualItem u
+
+            select u from IndividualItem u
       where u.id = :unitId
         and u.item.universityId = :u
         and u.item.organizationId = :o
@@ -103,4 +107,6 @@ public interface IndividualItemRepository extends  JpaRepository<IndividualItem,
            AND u.status = 'WAIT_RESERVED'
         """, nativeQuery = true)
     int reserveFromWaitReservedNoChange(@Param("unitId") Long unitId);
+
+
 }

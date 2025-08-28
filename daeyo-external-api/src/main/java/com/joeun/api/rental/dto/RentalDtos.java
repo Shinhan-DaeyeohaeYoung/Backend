@@ -1,6 +1,9 @@
 package com.joeun.api.rental.dto;
 
+import com.joeun.api.item.dto.ItemDtos;
+
 import java.time.LocalDateTime;
+import java.util.List;
 
 public final class RentalDtos {
     public record ReserveRequest(Long itemId, Long unitId, Integer ttlMinutes) {}
@@ -42,5 +45,19 @@ public final class RentalDtos {
             String status,
             Long depositId
     ) {}
+    public record UnitReservationDetail(
+            Long rentalId,
+            Long unitId,
+            String assetNo,
+            String unitStatus,
+            Long itemId,
+            String description,
+            Long universityId,
+            Long organizationId,
+            List<ItemDtos.UnitPhotoSummary> photos
+    ) {}
+
+
+
 }
 

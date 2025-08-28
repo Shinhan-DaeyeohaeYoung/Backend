@@ -1,14 +1,18 @@
 package com.joeun.api.rental.service;
 
+import com.joeun.api.item.dto.ItemDtos;
 import com.joeun.api.organization.dto.MyOrganizationResponse;
 import com.joeun.api.organization.service.OrganizationService;
 import com.joeun.api.rental.dto.RentalDtos;
 import com.joeun.api.rental.dto.RentalDtos.*;
 import com.joeun.domain.item.entity.Item;
+import com.joeun.domain.item.entity.UnitPhoto;
 import com.joeun.domain.item.service.ItemDomainService;
+import com.joeun.domain.item.service.UnitPhotoDomainService;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.rental.entity.RentalStatus;
 import com.joeun.global.config.LoginUser;
+import com.joeun.infra.aws.s3.service.ImageInfraService;
 import com.joeun.service.rental.RentalDomainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -19,6 +23,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toList;
+
 @Service
 @RequiredArgsConstructor
 public class RentalApplicationService {
@@ -26,6 +32,8 @@ public class RentalApplicationService {
     private final RentalDomainService domain;
     private final ItemDomainService itemDomainService;          //  itemId → (u,o) 해석용
     private final OrganizationService organizationService;      //  멤버십/권한 확인용
+    private final UnitPhotoDomainService unitPhotoDomainService;
+    private final ImageInfraService imageInfraService;
 
     private static final DateTimeFormatter F = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -265,24 +273,62 @@ public class RentalApplicationService {
         ));
     }
 
-    /** 조직별 내 예약 리스트 (조직 멤버십 확인) */
-    public Page<RentalDtos.ReservationSummary> listMyReservationsByOrganization(
+    // RentalApplicationService 내부 유틸
+    private List<ItemDtos.UnitPhotoSummary> toPhotoSummaries(List<UnitPhoto> photos) {
+        return photos.stream()
+                .map(p -> new ItemDtos.UnitPhotoSummary(
+                        p.getUnit() != null ? p.getUnit().getAssetNo() : null, // assetNo
+                        p.getImageKey(),                                       // key
+                        imageInfraService.getDownloadPresignedUrl(p.getImageKey()) // imageUrl
+                ))
+                .toList();
+    }
+
+
+    public List<RentalDtos.UnitReservationDetail> listMyReservationsByOrganization(
             LoginUser loginUser, Long organizationId, Pageable pageable
     ) {
-        if (!myOrgIds(loginUser).contains(organizationId)) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.FORBIDDEN, "No membership for organizationId=" + organizationId);
-        }
         Long u = loginUser.universityId();
-        return domain.listMyActiveReservationsByOrganization(u, organizationId, loginUser.id(), pageable)
-                .map(r -> new RentalDtos.ReservationSummary(
-                        r.getId(),
-                        r.getItem().getId(),
-                        r.getUnit().getId(),
-                        r.getStatus().name(),
-                        r.getReservedAt() == null ? null : r.getReservedAt().format(F),
-                        r.getReserveExpiresAt() == null ? null : r.getReserveExpiresAt().format(F)
-                ));
+        Long userId = loginUser.id();
+
+        // RESERVED & 미만료
+        List<Rental> rentals = domain.listMyActiveReservationsByOrganizationRaw(u, organizationId, userId);
+
+        List<RentalDtos.UnitReservationDetail> result = new ArrayList<>(rentals.size());
+        for (Rental r : rentals) {
+            if (r.getUnit() == null) continue;
+
+            var unit   = r.getUnit();
+            var unitId = unit.getId();
+            var item   = r.getItem();
+            var itemId = (r.getItem() != null ? r.getItem().getId() : null);
+            var itemDescription = (item != null ? item.getDescription() : null);
+
+
+            // 사진: 아이템 단위 목록을 받아와서 unitId로 필터링
+            List<UnitPhoto> photoEntities = (itemId == null)
+                    ? List.of()
+                    : unitPhotoDomainService.listItemUnitPhotos(
+                            r.getUniversityId(), r.getOrganizationId(), itemId
+                    ).stream()
+                    .filter(p -> p.getUnit() != null && Objects.equals(p.getUnit().getId(), unitId))
+                    .toList();
+
+            var photos = toPhotoSummaries(photoEntities); // (assetNo, key, imageUrl)
+
+            result.add(new RentalDtos.UnitReservationDetail(
+                    r.getId(),                 // rentalId
+                    unitId,                    // unitId
+                    unit.getAssetNo(),         // assetNo
+                    unit.getStatus().name(),   // unitStatus
+                    itemId,                    // itemId
+                    itemDescription,
+                    r.getUniversityId(),       // universityId
+                    r.getOrganizationId(),     // organizationId
+                    photos                     // unit photos
+            ));
+        }
+        return result;
     }
 
     /* ===================== 파싱 헬퍼 ===================== */

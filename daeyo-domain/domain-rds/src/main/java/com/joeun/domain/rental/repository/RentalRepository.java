@@ -20,6 +20,25 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RentalRepository extends JpaRepository<Rental, Long>,JpaSpecificationExecutor<Rental> {
+
+    @Query("""
+        select r
+          from Rental r
+          join fetch r.unit u
+          join fetch r.item i
+         where r.universityId = :u
+           and r.userId       = :userId
+           and r.status       = com.joeun.domain.rental.entity.RentalStatus.RESERVED
+           and r.reserveExpiresAt > CURRENT_TIMESTAMP
+           and (
+                r.organizationId = :orgId
+             or i.organizationId = :orgId
+           )
+    """)
+    List<Rental> findMyReservedActiveByOrg(@Param("u") Long universityId,
+                                           @Param("userId") Long userId,
+                                           @Param("orgId") Long organizationId);
+
     Page<Rental> findAllByUniversityIdAndUserIdAndStatusAndReserveExpiresAtAfter(
             Long universityId, Long userId, RentalStatus status, LocalDateTime now, Pageable pageable);
 

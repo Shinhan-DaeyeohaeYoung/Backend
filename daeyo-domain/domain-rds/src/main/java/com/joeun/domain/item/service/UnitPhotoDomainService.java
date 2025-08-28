@@ -38,6 +38,10 @@ public class UnitPhotoDomainService {
     /* ===== 조회 ===== */
 
     @Transactional(readOnly = true)
+    public Optional<UnitPhoto> findUnitCover(Long u, Long o, Long unitId) {
+        return photoRepository.findByUniversityIdAndOrganizationIdAndUnit_Id(u, o, unitId);
+    }
+    @Transactional(readOnly = true)
     public Optional<UnitPhoto> findItemCover(Long u, Long o, Long itemId) {
         return photoRepository
                 .findTopByUniversityIdAndOrganizationIdAndUnit_Item_IdOrderByTakenAtDescIdDesc(u, o, itemId);
