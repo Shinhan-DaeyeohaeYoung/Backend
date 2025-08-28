@@ -69,7 +69,7 @@ public class QrController {
     @GetMapping(value = "/admin/org-qr.png", produces = MediaType.IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> orgQrPng(
             @AuthenticationPrincipal LoginUser loginUser,
-            @RequestParam(required = false) Long organizationId,
+            @RequestParam Long organizationId,
             @RequestParam(defaultValue = "SITE") String type,
             @RequestParam(required = false) Long siteId,
             @RequestParam(required = false) Long ttlSec,
@@ -96,14 +96,14 @@ public class QrController {
     @GetMapping("/admin/org-qr/meta")
     public Map<String, Object> orgQrMeta(
             @AuthenticationPrincipal LoginUser loginUser,
-            @RequestParam(required = false) Long organizationId,
+            @RequestParam Long organizationId,
             @RequestParam(defaultValue = "SITE") String type,
             @RequestParam(required = false) Long siteId,
             @RequestParam(required = false) Long ttlSec
     ) {
         var m = pickMyOrg(loginUser, organizationId);
         Long u = m.getUniversityId();
-        Long o = m.getOrganizationId();
+        Long o = organizationId;
 
         String token = qrService.buildOrgToken(u, o, type, siteId, ttlSec);
         var resolved = qrService.validateToken(token);
