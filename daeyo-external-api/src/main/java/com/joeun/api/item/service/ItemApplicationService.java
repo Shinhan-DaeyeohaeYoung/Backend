@@ -109,6 +109,7 @@ public class ItemApplicationService {
                             i.getDescription(),
                             i.getTotalQuantity(),
                             i.getAvailableQuantity(),
+                            waitlistDomainService.getWaitListCount(i.getId()),
                             i.getIsActive(),
                             cover == null ? null : cover.getImageKey()
                     );

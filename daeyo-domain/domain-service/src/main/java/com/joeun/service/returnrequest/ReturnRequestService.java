@@ -128,7 +128,7 @@ public class ReturnRequestService {
             unit.markWaitReserved();
 
             waitlistDomainService.offerReserveAndNotify(
-                    w.getId(), now, unitId, u, o
+                    w.getId(), now, unitId, universityid, organizationId
             );
 
             waitlistDomainService.markFulfilledById(w.getId(), now);
