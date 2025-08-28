@@ -5,15 +5,36 @@ plugins {
 group = 'com.joeun'
 version = '0.0.1-SNAPSHOT'
 
+bootJar {enabled = false}
+jar {enabled = true}
+
 repositories {
     mavenCentral()
 }
 
-dependencies {
-    testImplementation platform('org.junit:junit-bom:5.10.0')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-}
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'java-library'
 
-test {
-    useJUnitPlatform()
+    repositories {
+        mavenCentral()
+    }
+
+    configurations {
+        compileOnly {
+            extendsFrom annotationProcessor
+        }
+    }
+
+    dependencies {
+        implementation 'org.springframework.boot:spring-boot-starter'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
+    }
 }

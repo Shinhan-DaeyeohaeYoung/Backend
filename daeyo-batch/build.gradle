@@ -5,11 +5,18 @@ plugins {
 group = 'com.joeun'
 version = '0.0.1-SNAPSHOT'
 
+bootJar {enabled = false}
+jar {enabled = true}
+
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    api project(':daeyo-domain:domain-service')
+
+    // Spring Boot
+    implementation 'org.springframework.boot:spring-boot-starter'
     // Batch
     implementation 'org.springframework.boot:spring-boot-starter-batch'
 

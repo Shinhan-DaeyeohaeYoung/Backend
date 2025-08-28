@@ -1,6 +1,55 @@
 spring:
   application:
     name: daeyo-service
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
 
 server:
   port: 8082
+
+app:
+  cookie:
+    secure: false     # 로컬 HTTP: false / 운영 HTTPS: true
+    same-site: Lax    # 운영에서 크로스 도메인이면 None (+ secure:true 필수)
+    domain: ""        # 필요 시 .example.com
+
+jwt:
+  secret: "${JWT_SECRET:change-this-to-32+chars-secret-key-change-this}"
+  access-token-validity-seconds: 3600
+  refresh-token-validity-seconds: 1209600
+
+crypto:
+  key: "${CRYPTO_KEY_BASE64:ue7iqDtaqodXtcJXhhjPj4f61HIM4MPKBl5K6Tq6suU=}"
+
+#QR 관련 설정 (QrService
+qr:
+  scheme: "${QR_SCHEME:daeyo}"                # ex) daeyo://site?token=...
+  size: "${QR_SIZE:320}"
+  scan-url: "${QR_SCAN_URL:http://localhost:5173/scan}"  # 스캔 후 프론트 라우트 (컨트롤러에서 쓰면)
+  jwt:
+    secret: "${QR_JWT_SECRET:please-set-64+chars-secret}"
+    default-ttl-seconds: "${QR_JWT_DEFAULT_TTL:180}"       # QrService @Value 와 일치!
+
+openai:
+  key:
+  model: gpt-4o-mini
+  base-url: "${OPENAI_BASE_URL:https://api.openai.com}"
+
+
+file:
+  storage: mock
+  s3:
+    bucket: dummy
+    region: ap-northeast-2
+    publicBaseUrl: ""
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+    org.hibernate.SQL: debug              # 실행되는 SQL 로그
+    org.hibernate.orm.jdbc.bind: trace    # 바인딩 파라미터 값
+    org.springframework.transaction: debug  # 트랜잭션 시작/커밋/롤백
+    org.hibernate.engine.internal: debug  # flush 관련 내부 동작
+    org.hibernate.engine.spi.ActionQueue: debug
+    org.hibernate.event.internal: debug
