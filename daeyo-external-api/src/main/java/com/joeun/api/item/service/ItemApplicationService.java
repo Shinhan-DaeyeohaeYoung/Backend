@@ -7,7 +7,6 @@ import com.joeun.api.item.dto.ItemDtos.*;
 import com.joeun.api.item.dto.UnitPhotoDtos;
 import com.joeun.api.organization.dto.MyOrganizationResponse;
 import com.joeun.api.organization.service.OrganizationService;
-import com.joeun.api.security.TenantProvider;
 import com.joeun.domain.item.entity.IndividualItem;
 import com.joeun.domain.item.service.ItemDomainService;
 import com.joeun.domain.item.service.UnitPhotoDomainService;
@@ -103,9 +102,16 @@ public class ItemApplicationService {
                             .findItemCover(i.getUniversityId(), i.getOrganizationId(), i.getId())
                             .orElse(null);
                     return new ItemDtos.ItemSummaryResponse(
-                            i.getId(), i.getUniversityId(), i.getOrganizationId(),
-                            i.getName(), i.getTotalQuantity(), i.getAvailableQuantity(), waitlistDomainService.getWaitListCount(i.getId()),
-                            i.getIsActive(), cover == null ? null : cover.getImageKey()
+                            i.getId(),
+                            i.getUniversityId(),
+                            i.getOrganizationId(),
+                            i.getName(),
+                            i.getDescription(),
+                            i.getTotalQuantity(),
+                            i.getAvailableQuantity(),
+                            waitlistDomainService.getWaitListCount(i.getId()),
+                            i.getIsActive(),
+                            cover == null ? null : cover.getImageKey()
                     );
                 });
     }
@@ -121,9 +127,16 @@ public class ItemApplicationService {
                             .findItemCover(i.getUniversityId(), i.getOrganizationId(), i.getId())
                             .orElse(null);
                     return new ItemDtos.ItemSummaryResponse(
-                            i.getId(), i.getUniversityId(), i.getOrganizationId(),
-                            i.getName(), i.getTotalQuantity(), i.getAvailableQuantity(), waitlistDomainService.getWaitListCount(i.getId()),
-                            i.getIsActive(), cover == null ? null : cover.getImageKey()
+                            i.getId(),
+                            i.getUniversityId(),
+                            i.getOrganizationId(),
+                            i.getName(),
+                            i.getDescription(),
+                            i.getTotalQuantity(),
+                            i.getAvailableQuantity(),
+                            waitlistDomainService.getWaitListCount(i.getId()),
+                            i.getIsActive(),
+                            cover == null ? null : cover.getImageKey()
                     );
                 });
     }

@@ -1,7 +1,6 @@
 package com.joeun.api.item.service;
 
 import com.joeun.api.item.dto.AdminItemRegisterDtos.*;
-import com.joeun.api.security.TenantProvider;
 import com.joeun.domain.item.service.ItemDomainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

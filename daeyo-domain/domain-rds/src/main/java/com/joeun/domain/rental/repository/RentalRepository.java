@@ -24,7 +24,8 @@ public interface RentalRepository extends JpaRepository<Rental, Long>,JpaSpecifi
             Long universityId, Long userId, RentalStatus status, LocalDateTime now, Pageable pageable);
 
     @Query("""
-           select r from Rental r
+
+            select r from Rental r
            where r.id = :id and r.universityId = :u and r.organizationId = :o
            """)
     Optional<Rental> findByIdAndTenant(@Param("u") Long universityId,
@@ -87,5 +88,6 @@ public interface RentalRepository extends JpaRepository<Rental, Long>,JpaSpecifi
             LocalDateTime now,
             Pageable pageable
     );
-
+    @Query("select r.unit.id from Rental r where r.id = :rentalId")
+    Optional<Long> findUnitIdByRentalId(@Param("rentalId") Long rentalId);
 }

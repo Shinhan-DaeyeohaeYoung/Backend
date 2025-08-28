@@ -79,16 +79,16 @@ public class ReturnRequestApplicationService {
         );
     }
 
-    public ReturnRequest cancel(LoginUser loginUser, Long id) {
+    public ReturnRequest cancel(LoginUser loginUser, Long id,Long organizationId, Long universityId) {
         // 도메인에서 본인/상태 검증 처리
-        return domain.cancel(id, loginUser.id());
+        return domain.cancel(id, loginUser.id(),loginUser.universityId(), organizationId);
     }
 
     /* ===== 관리자 승인 ===== */
 
-    public ReturnRequest approve(LoginUser loginUser, Long id, Long organizationId) {
+    public ReturnRequest approve(LoginUser loginUser, Long id, Long organizationId, String imageKey) {
         // 권한은 도메인에서도 재검증한다고 가정하지만, 사전으로 관리자 멤버십 한 번 체크
         pickAdminOrg(loginUser, organizationId);
-        return domain.approve(loginUser.id(), id);
+        return domain.approve(loginUser.id(),loginUser.universityId(), id,organizationId,imageKey); //허용한 유저 아이디, 리퀘스트id, 조직 id, 이미지키
     }
 }

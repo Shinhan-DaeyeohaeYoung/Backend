@@ -98,19 +98,23 @@ public class ReturnRequestService {
 
     /* ================== 승인 (관리자) ================== */
     @Transactional
-    public ReturnRequest approve(Long approverUserId, Long id) {
-        Long u = 1L;
-        Long o = 2L;
+    public ReturnRequest approve(Long approverUserId,Long universityid, Long id, Long organizationId, String imageKey) {
+        // 0) 우선 조회해서 테넌트(u,o) 확보
+        ReturnRequest found = returnRequestRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("ReturnRequest not found: id=" + id));
 
-        ReturnRequest rr = returnRequestRepository.lockByIdAndTenant(id, u, o)
+        // 1) 잠금 + 테넌트 확인
+        ReturnRequest rr = returnRequestRepository.lockByIdAndTenant(id, universityid, organizationId)
                 .orElseThrow(() -> new NoSuchElementException(
-                        "returnRequest not found: id=%d, univ=%d, org=%d".formatted(id, u, o)));
+                        "returnRequest not found: id=%d, univ=%d, org=%d".formatted(id, universityid, organizationId)));
 
         LocalDateTime now = LocalDateTime.now();
         rr.approve(approverUserId, now);
 
-        this.markRentalReturnedByReturnApproval(u, o, rr.getRental().getId(), approverUserId);
+        // 3) RENTAL 상태 전이(RETURNED)
+        this.markRentalReturnedByReturnApproval(universityid, organizationId, rr.getRental().getId(), approverUserId);
 
+        // 4) 유닛 AVAILABLE 전환
         Long unitId = rr.getRental().getUnit().getId();
         IndividualItem unit = individualItemRepository.findById(unitId)
                 .orElseThrow(() -> new NoSuchElementException("unit not found: id=" + unitId));
@@ -124,7 +128,7 @@ public class ReturnRequestService {
             unit.markWaitReserved();
 
             waitlistDomainService.offerReserveAndNotify(
-                    w.getId(), now, unitId, u, o
+                    w.getId(), now, unitId, universityid, organizationId
             );
 
             waitlistDomainService.markFulfilledById(w.getId(), now);
@@ -132,19 +136,51 @@ public class ReturnRequestService {
         }
 
         unit.markAvailable();
+
+        // 5) UnitPhoto upsert (반납 신청 시 제출한 사진으로 교체)
+        upsertUnitPhotoWithSubmittedImage(rr, unitId, universityid, organizationId);
+
         unit.getItem().returnOne();
         unit.getItem().activeOn();
         return rr;
     }
 
+    private void upsertUnitPhotoWithSubmittedImage(ReturnRequest rr, Long unitId, Long u, Long o) {
+        String key  = rr.getSubmittedImageKey();   // 엔티티 필드명에 맞게 사용
+        String mime = rr.getSubmittedImageMime();  // 없으면 null 허용
+        String hash = rr.getSubmittedImageHash();  // 없으면 null 허용
+
+        if (key == null || key.isBlank()) {
+            // 제출된 사진이 없으면 스킵
+            return;
+        }
+
+        var opt = unitPhotoRepository
+                .findByUnit_IdAndUniversityIdAndOrganizationId(unitId, u, o)
+                .or(() -> unitPhotoRepository.findByUnit_Id(unitId)); // 테넌트 없는 과거 레코드 호환
+
+        if (opt.isPresent()) {
+            // 변경 감지 방식 (도메인 메서드 활용)
+            opt.get().replacePhoto(key, mime, hash);
+        } else {
+            // 없으면 생성
+            var unitRef = individualItemRepository.getReferenceById(unitId);
+            UnitPhoto up = UnitPhoto.builder()
+                    .unit(unitRef)
+                    .universityId(u)
+                    .organizationId(o)
+                    .imageKey(key)
+                    .mime(mime)
+                    .hash(hash)
+                    .build();
+            unitPhotoRepository.save(up);
+        }
+    }
 
 
     /* ================== 취소 (유저) ================== */
     @Transactional
-    public ReturnRequest cancel(Long id, Long actorUserId) {
-        Long u = 1L;
-        Long o = 2L;
-
+    public ReturnRequest cancel(Long id, Long actorUserId,Long u, Long o) {
         ReturnRequest rr = returnRequestRepository.lockByIdAndTenant(id, u, o)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "ReturnRequest not found: id=%d, univ=%d, org=%d".formatted(id, u, o)));
@@ -182,8 +218,8 @@ public class ReturnRequestService {
         Long unitId = rr.getRental().getUnit().getId();
         if (unitId == null) return null;
 
-        Long u = 1L;
-        Long o = 2L;
+        Long u = rr.getUniversityId();
+        Long o = rr.getOrganizationId();
 
         return unitPhotoRepository
                 .findByUnit_IdAndUniversityIdAndOrganizationId(unitId, u, o)
