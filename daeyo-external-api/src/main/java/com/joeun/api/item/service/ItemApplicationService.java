@@ -7,7 +7,6 @@ import com.joeun.api.item.dto.ItemDtos.*;
 import com.joeun.api.item.dto.UnitPhotoDtos;
 import com.joeun.api.organization.dto.MyOrganizationResponse;
 import com.joeun.api.organization.service.OrganizationService;
-import com.joeun.api.security.TenantProvider;
 import com.joeun.domain.item.entity.IndividualItem;
 import com.joeun.domain.item.service.ItemDomainService;
 import com.joeun.domain.item.service.UnitPhotoDomainService;

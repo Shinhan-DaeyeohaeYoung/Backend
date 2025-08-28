@@ -70,7 +70,7 @@ public class ReturnRequestController {
             @PathVariable Long id,
             @RequestBody ApproveReturnRequestRequest req
     ) {
-        var rr = app.approve(loginUser, id, req.organizationId()); // orgId 필요시 바디/쿼리 중 택1
+        var rr = app.approve(loginUser, id, req.organizationId(), req.imageKey());
         return ResponseEntity.ok(ReturnRequestResponse.from(rr));
     }
 
@@ -82,7 +82,7 @@ public class ReturnRequestController {
             @PathVariable Long id,
             @RequestBody CancelReturnRequest req
     ) {
-        var rr = app.cancel(loginUser, id);
+        var rr = app.cancel(loginUser, id, req.organizationId(), req.organizationId());
         return ResponseEntity.ok(ReturnRequestResponse.from(rr));
     }
 }

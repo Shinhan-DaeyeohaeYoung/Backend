@@ -1,6 +1,5 @@
 package com.joeun.api.qr.service;
 
-import com.joeun.api.security.TenantProvider;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.qrcode.QRCodeWriter;
