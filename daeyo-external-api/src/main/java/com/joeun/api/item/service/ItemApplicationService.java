@@ -15,6 +15,7 @@ import com.joeun.domain.rental.entity.Rental;
 import com.joeun.global.config.LoginUser;
 import com.joeun.service.organization.OrganizationDomainService;
 import com.joeun.service.rental.RentalDomainService;
+import com.joeun.service.waitlist.WaitlistDomainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +35,7 @@ public class ItemApplicationService {
     private final UnitPhotoDomainService unitPhotoDomainService;
     private final RentalDomainService rentalDomainService;
     private final OrganizationService organizationService;
+    private final WaitlistDomainService waitlistDomainService;
 
     /* ===== 공통 헬퍼 ===== */
 
@@ -102,7 +104,7 @@ public class ItemApplicationService {
                             .orElse(null);
                     return new ItemDtos.ItemSummaryResponse(
                             i.getId(), i.getUniversityId(), i.getOrganizationId(),
-                            i.getName(), i.getTotalQuantity(), i.getAvailableQuantity(),
+                            i.getName(), i.getTotalQuantity(), i.getAvailableQuantity(), waitlistDomainService.getWaitListCount(i.getId()),
                             i.getIsActive(), cover == null ? null : cover.getImageKey()
                     );
                 });
@@ -120,7 +122,7 @@ public class ItemApplicationService {
                             .orElse(null);
                     return new ItemDtos.ItemSummaryResponse(
                             i.getId(), i.getUniversityId(), i.getOrganizationId(),
-                            i.getName(), i.getTotalQuantity(), i.getAvailableQuantity(),
+                            i.getName(), i.getTotalQuantity(), i.getAvailableQuantity(), waitlistDomainService.getWaitListCount(i.getId()),
                             i.getIsActive(), cover == null ? null : cover.getImageKey()
                     );
                 });
@@ -184,7 +186,7 @@ public class ItemApplicationService {
         return new ItemDtos.ItemDetailResponse(
                 item.getId(), item.getUniversityId(), item.getOrganizationId(),
                 item.getName(), item.getDescription(), item.getDeposit(), item.getMaxRentalDays(),
-                item.getTotalQuantity(), item.getAvailableQuantity(), item.getIsActive(),
+                item.getTotalQuantity(), item.getAvailableQuantity(), waitlistDomainService.getWaitListCount(itemId) ,item.getIsActive(),
                 stats, photos, unitsDto
         );
     }

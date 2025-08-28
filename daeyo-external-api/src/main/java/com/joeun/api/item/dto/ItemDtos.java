@@ -8,7 +8,7 @@ public final class ItemDtos {
     public record ItemSummaryResponse(
             Long id, Long universityId, Long organizationId,
             String name,
-            Integer totalQuantity, Integer availableQuantity,
+            Integer totalQuantity, Integer availableQuantity, Integer countWaitList,
             Boolean isActive,
             String coverKey // null 가능
     ) {}
@@ -34,7 +34,7 @@ public final class ItemDtos {
             Long id, Long universityId, Long organizationId,
             String name, String description,
             Long deposit, Integer maxRentalDays,
-            Integer totalQuantity, Integer availableQuantity,
+            Integer totalQuantity, Integer availableQuantity, Integer countWaitList,
             Boolean isActive,
             Map<String, Long> unitStats,
             List<UnitPhotoSummary> photos,

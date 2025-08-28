@@ -50,4 +50,19 @@ public interface WaitlistRepository extends JpaRepository<Waitlist, Long> {
 
     @Query(value = "SELECT * FROM waitlist WHERE id = :id FOR UPDATE", nativeQuery = true)
     Optional<Waitlist> findByIdForUpdate(@Param("id") Long id);
+
+    @Query("select count(w) from Waitlist w where w.item.id = :itemId and w.status = 'WAITING'")
+    int countWaitingByItemId(@Param("itemId") Long itemId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = false)
+    @Query("""
+          update Waitlist w
+             set w.status = com.joeun.domain.waitlist.entity.WaitlistStatus.FULFILLED
+           where w.id = :id
+             and w.status in (
+               com.joeun.domain.waitlist.entity.WaitlistStatus.WAITING,
+               com.joeun.domain.waitlist.entity.WaitlistStatus.OFFERED
+             )
+        """)
+    void markFulfilledById(@Param("id") Long id);
 }

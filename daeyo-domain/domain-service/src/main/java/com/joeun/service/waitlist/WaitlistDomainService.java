@@ -77,4 +77,12 @@ public class WaitlistDomainService {
         waitlist.markNotified(now);
         waitlist.offer(now);
     }
+
+    public int getWaitListCount(Long itemId) {
+        return waitlistRdsService.getWaitListCount(itemId);
+    }
+
+    public void markFulfilledById(Long id, LocalDateTime now) {
+        waitlistRdsService.markFulfilledById(id, now);
+    }
 }

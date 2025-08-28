@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -26,5 +27,13 @@ public class WaitlistRdsService {
 
     public Optional<Waitlist> findByIdForUpdate(Long waitlistId) {
         return waitlistRepository.findByIdForUpdate(waitlistId);
+    }
+
+    public int getWaitListCount(Long itemId) {
+        return waitlistRepository.countWaitingByItemId(itemId);
+    }
+
+    public void markFulfilledById(Long id, LocalDateTime now) {
+        waitlistRepository.markFulfilledById(id);
     }
 }

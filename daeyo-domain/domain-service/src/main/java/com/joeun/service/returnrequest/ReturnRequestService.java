@@ -127,12 +127,13 @@ public class ReturnRequestService {
                     w.getId(), now, unitId, u, o
             );
 
-            w.markFulfilled();
+            waitlistDomainService.markFulfilledById(w.getId(), now);
             return rr;
         }
 
         unit.markAvailable();
         unit.getItem().returnOne();
+        unit.getItem().activeOn();
         return rr;
     }
 
