@@ -5,6 +5,7 @@ import com.joeun.api.returnrequest.service.ReturnRequestApplicationService;
 import com.joeun.domain.returnrequest.entity.ReturnRequestStatus;
 import com.joeun.global.config.LoginUser;
 import io.swagger.v3.oas.annotations.*;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Return Requests", description = "반납 신청/승인/취소 및 조회")
 @RestController
+@SecurityRequirement(name = "Authorization")
 @RequestMapping(value = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 public class ReturnRequestController {

@@ -5,6 +5,7 @@ import com.joeun.common.ImageType;
 import com.joeun.common.PresignResponse;
 import com.joeun.infra.aws.s3.service.ImageInfraService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/images")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Authorization")
 public class ImageController {
 
     private final ImageInfraService imageInfraService;

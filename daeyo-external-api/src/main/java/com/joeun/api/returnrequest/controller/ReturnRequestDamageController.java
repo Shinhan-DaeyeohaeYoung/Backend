@@ -6,6 +6,7 @@ import com.joeun.api.gpt.service.DamageAssessmentService;
 import com.joeun.global.file.FileUrlResolver;
 
 import com.joeun.service.returnrequest.ReturnRequestQueryService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Authorization")
 @RequestMapping("/api")
 public class ReturnRequestDamageController {
 
