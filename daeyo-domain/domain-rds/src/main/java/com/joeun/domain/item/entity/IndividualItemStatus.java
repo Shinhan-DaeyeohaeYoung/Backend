@@ -1,5 +1,5 @@
 package com.joeun.domain.item.entity;
 
 public enum IndividualItemStatus {
-    AVAILABLE, RESERVED, RENTED, REPAIR, LOST, DISPOSED
+    AVAILABLE, RESERVED, RENTED, REPAIR, LOST, DISPOSED, WAIT_RESERVED
 }

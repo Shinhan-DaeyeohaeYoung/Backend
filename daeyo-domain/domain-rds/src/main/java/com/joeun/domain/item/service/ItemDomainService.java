@@ -12,13 +12,19 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class ItemDomainService {
+
+
     public record UnitCreateResult(Long unitId, String assetNo) {}
     private final ItemRepository itemRepository;
     private final IndividualItemRepository unitRepository;
 
     /* ===== 아이템 ////// */
 
-
+    @Transactional(readOnly = true)
+    public Item getItemById(Long itemId) {
+        return itemRepository.findById(itemId)
+                .orElseThrow(() -> new NoSuchElementException("item not found"));
+    }
 
     @Transactional
     public Item createItem(Long u, Long o, String name, String desc, Long deposit, Integer maxDays, Boolean active) {

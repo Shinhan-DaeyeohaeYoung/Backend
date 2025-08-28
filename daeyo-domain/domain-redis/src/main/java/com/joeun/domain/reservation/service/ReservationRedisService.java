@@ -2,6 +2,7 @@ package com.joeun.domain.reservation.service;
 
 import com.joeun.domain.reservation.vo.ReserveResult;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
@@ -9,7 +10,6 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class ReservationRedisService {
 
     private final StringRedisTemplate stringRedisTemplate;
@@ -19,6 +19,14 @@ public class ReservationRedisService {
     private static final String ITEM_PREFIX = "active:item:";
     private static final String HOLDING_PREFIX = "hold:";
     private static final String HOLDING_EXPIRATIONS = "hold:expirations";
+
+    public ReservationRedisService(StringRedisTemplate stringRedisTemplate,
+                                   @Qualifier("holdingScript") RedisScript<List> holdingScript,
+                                   @Qualifier("revertHoldingScript") RedisScript<List> revertHoldingScript) {
+        this.stringRedisTemplate = stringRedisTemplate;
+        this.holdingScript = holdingScript;
+        this.revertHoldingScript = revertHoldingScript;
+    }
 
     public ReserveResult doReserve(long itemId, String holdingId, int ttlSec) {
 

@@ -1,17 +1,21 @@
-package com.joeun.domain.returnrequest.service;
+package com.joeun.service.returnrequest;
 
+import com.joeun.domain.item.entity.IndividualItem;
 import com.joeun.domain.item.repository.IndividualItemRepository;
 import com.joeun.domain.item.repository.UnitPhotoRepository;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.rental.entity.RentalStatus;
 import com.joeun.domain.rental.repository.RentalRepository;
+import com.joeun.domain.reservation.service.ReservationRedisService;
 import com.joeun.domain.returnrequest.entity.ReturnRequest;
 import com.joeun.domain.returnrequest.entity.ReturnRequestStatus;
 import com.joeun.domain.returnrequest.repository.ReturnRequestRepository;
+import com.joeun.domain.waitlist.entity.Waitlist;
+import com.joeun.service.rental.RentalDomainService;
+import com.joeun.service.waitlist.WaitlistDomainService;
 import jakarta.persistence.EntityNotFoundException;
 
-import org.hibernate.engine.jdbc.connections.spi.AbstractMultiTenantConnectionProvider;
-import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,6 +25,7 @@ import com.joeun.domain.item.entity.UnitPhoto;
 
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +35,9 @@ public class ReturnRequestService {
     private final RentalRepository rentalRepository;
     private final UnitPhotoRepository unitPhotoRepository;
     private final IndividualItemRepository individualItemRepository;
+    private final WaitlistDomainService waitlistDomainService;
+    private final RentalDomainService rentalDomainService;
+    private final ReservationRedisService reservationRedisService;
 
 
     /* ================== 조회 (관리자) ================== */
@@ -91,26 +99,41 @@ public class ReturnRequestService {
     /* ================== 승인 (관리자) ================== */
     @Transactional
     public ReturnRequest approve(Long approverUserId, Long id) {
-        // 그냥 임의 값 고정
         Long u = 1L;
         Long o = 2L;
 
-        // 1) 반납 신청 건 가져오기
         ReturnRequest rr = returnRequestRepository.lockByIdAndTenant(id, u, o)
                 .orElseThrow(() -> new NoSuchElementException(
                         "returnRequest not found: id=%d, univ=%d, org=%d".formatted(id, u, o)));
 
-        // 2) 승인 처리
-        rr.approve(approverUserId, LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        rr.approve(approverUserId, now);
 
         this.markRentalReturnedByReturnApproval(u, o, rr.getRental().getId(), approverUserId);
 
-        // 3) 개별 상품 AVAILABLE 처리
         Long unitId = rr.getRental().getUnit().getId();
-        var unit = individualItemRepository.findById(unitId)
+        IndividualItem unit = individualItemRepository.findById(unitId)
                 .orElseThrow(() -> new NoSuchElementException("unit not found: id=" + unitId));
-        unit.markAvailable();
 
+        reservationRedisService.revertReserve(unitId, rr.getRental().getOfferToken());
+
+        Optional<Waitlist> next = waitlistDomainService.getNextOutstandingWaitlist(rr.getRental().getItem().getId());
+        if (next.isPresent()) {
+            Waitlist w = next.get();
+
+            unit.markWaitReserved();
+
+            waitlistDomainService.offerReserveAndNotify(
+                    w.getId(), now, unitId, u, o
+            );
+
+            waitlistDomainService.markFulfilledById(w.getId(), now);
+            return rr;
+        }
+
+        unit.markAvailable();
+        unit.getItem().returnOne();
+        unit.getItem().activeOn();
         return rr;
     }
 

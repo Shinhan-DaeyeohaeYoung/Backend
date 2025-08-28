@@ -6,9 +6,9 @@ import com.joeun.api.returnrequest.dto.*;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.returnrequest.entity.ReturnRequest;
 import com.joeun.domain.returnrequest.entity.ReturnRequestStatus;
-import com.joeun.domain.returnrequest.service.ReturnRequestService; // 도메인 서비스
 import com.joeun.global.config.LoginUser;
 import com.joeun.service.rental.RentalDomainService;
+import com.joeun.service.returnrequest.ReturnRequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

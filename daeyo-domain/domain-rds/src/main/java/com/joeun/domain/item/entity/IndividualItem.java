@@ -32,7 +32,7 @@ public class IndividualItem {
     @ManyToOne(fetch = LAZY) @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 
-    @Enumerated(EnumType.STRING) @Column(nullable = false)
+    @Enumerated(EnumType.STRING) @Column(nullable = false, length = 16)
     private IndividualItemStatus status;
 
     @Column(name = "asset_no", nullable = false, length = 64)
@@ -49,5 +49,8 @@ public class IndividualItem {
     }
     public void markAvailable() { this.status = IndividualItemStatus.AVAILABLE; }
 
+    public void markWaitReserved() {
+        this.status = IndividualItemStatus.WAIT_RESERVED;
+    }
 }
 

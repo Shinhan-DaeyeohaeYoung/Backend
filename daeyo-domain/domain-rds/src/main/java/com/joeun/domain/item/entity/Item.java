@@ -101,4 +101,8 @@ public class Item {
         }
     }
 
+
+    public void activeOn() {
+        this.isActive = true;
+    }
 }
