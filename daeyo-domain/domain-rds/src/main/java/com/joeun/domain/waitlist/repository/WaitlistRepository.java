@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface WaitlistRepository extends JpaRepository<Waitlist, Long> {
@@ -65,4 +66,8 @@ public interface WaitlistRepository extends JpaRepository<Waitlist, Long> {
              )
         """)
     void markFulfilledById(@Param("id") Long id);
+
+    List<Waitlist> findAllByItemIdAndStatusOrderByJoinedAtAsc(Long itemId, WaitlistStatus waitlistStatus);
+
+    boolean existsByItemIdAndUserIdAndStatusIn(Long itemId, Long id, List<WaitlistStatus> waiting);
 }

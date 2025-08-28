@@ -2,6 +2,7 @@ package com.joeun.service.waitlist;
 
 import com.joeun.domain.notification.entity.NotiType;
 import com.joeun.domain.waitlist.entity.Waitlist;
+import com.joeun.domain.waitlist.entity.WaitlistStatus;
 import com.joeun.domain.waitlist.service.WaitlistRdsService;
 import com.joeun.global.dto.NotificationRequest;
 import com.joeun.service.rental.RentalDomainService;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -84,5 +86,13 @@ public class WaitlistDomainService {
 
     public void markFulfilledById(Long id, LocalDateTime now) {
         waitlistRdsService.markFulfilledById(id, now);
+    }
+
+    public List<Waitlist> getWaitlistsByItemIdAndStatus(Long itemId, WaitlistStatus waitlistStatus) {
+        return waitlistRdsService.getWaitlistsByItemIdAndStatus(itemId, waitlistStatus);
+    }
+
+    public boolean existsActiveWait(Long itemId, Long id, List<WaitlistStatus> waiting) {
+        return waitlistRdsService.existsActiveWait(itemId, id, waiting);
     }
 }

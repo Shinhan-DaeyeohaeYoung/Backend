@@ -1,6 +1,7 @@
 package com.joeun.api.waitlist.controller;
 
 import com.joeun.api.waitlist.api.WaitlistApi;
+import com.joeun.api.waitlist.dto.WaitlistPositionByItemResponse;
 import com.joeun.api.waitlist.service.WaitlistService;
 import com.joeun.global.config.LoginUser;
 import jakarta.validation.Valid;
@@ -8,10 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -27,4 +25,12 @@ public class WaitlistController implements WaitlistApi {
         waitlistService.joinWaitListByItemId(itemId, loginUser);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/items/{itemId}/count")
+    public ResponseEntity<WaitlistPositionByItemResponse> getWaitlistCountByItemId(@PathVariable @Valid Long itemId,
+                                                                                   @AuthenticationPrincipal LoginUser loginUser) {
+        WaitlistPositionByItemResponse response = waitlistService.getWaitlistCountByItemId(itemId, loginUser);
+        return ResponseEntity.ok(response);
+    }
+
 }

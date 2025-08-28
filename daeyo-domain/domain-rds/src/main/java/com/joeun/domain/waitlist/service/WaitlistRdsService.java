@@ -1,12 +1,14 @@
 package com.joeun.domain.waitlist.service;
 
 import com.joeun.domain.waitlist.entity.Waitlist;
+import com.joeun.domain.waitlist.entity.WaitlistStatus;
 import com.joeun.domain.waitlist.repository.WaitlistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -35,5 +37,13 @@ public class WaitlistRdsService {
 
     public void markFulfilledById(Long id, LocalDateTime now) {
         waitlistRepository.markFulfilledById(id);
+    }
+
+    public List<Waitlist> getWaitlistsByItemIdAndStatus(Long itemId, WaitlistStatus waitlistStatus) {
+        return waitlistRepository.findAllByItemIdAndStatusOrderByJoinedAtAsc(itemId, waitlistStatus);
+    }
+
+    public boolean existsActiveWait(Long itemId, Long id, List<WaitlistStatus> waiting) {
+        return waitlistRepository.existsByItemIdAndUserIdAndStatusIn(itemId, id, waiting);
     }
 }
