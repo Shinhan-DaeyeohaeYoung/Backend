@@ -1,6 +1,7 @@
 package com.joeun.api.organization.controller;
 
 import com.joeun.api.organization.dto.MyOrganizationResponse;
+import com.joeun.api.organization.dto.OrgBankAccountResponse;
 import com.joeun.api.organization.dto.OrganizationJoinRequest;
 import com.joeun.api.organization.dto.UserOrgMembershipResponse;
 import com.joeun.api.organization.service.OrganizationService;
@@ -52,6 +53,15 @@ public class OrganizationController {
       @PathVariable("id") Long organizationId
   ) {
     return ResponseEntity.ok(orgService.getMyOrganization(loginUser, organizationId));
+  }
+
+  @GetMapping("/{id}/bank-accounts")
+  public ResponseEntity<List<OrgBankAccountResponse>> getOrganizationAccounts(
+      @PathVariable("id") Long orgId
+      // , @AuthenticationPrincipal LoginUser loginUser
+  ) {
+    List<OrgBankAccountResponse> body = orgService.listOrganizationBankAccounts(orgId /*, loginUser*/);
+    return ResponseEntity.ok(body);
   }
 
 }

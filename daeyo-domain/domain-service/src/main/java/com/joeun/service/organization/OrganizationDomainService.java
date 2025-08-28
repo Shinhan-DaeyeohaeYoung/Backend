@@ -1,6 +1,8 @@
 package com.joeun.service.organization;
 
+import com.joeun.domain.organization.entity.OrgBankAccount;
 import com.joeun.domain.organization.entity.Organization;
+import com.joeun.domain.organization.repository.OrgBankAccountRepository;
 import com.joeun.domain.organization.repository.OrganizationRepository;
 import com.joeun.domain.organization.types.OrganizationType;
 import com.joeun.domain.users.entity.User;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 public class OrganizationDomainService {
 
   private final OrganizationRepository organizationRepository;
+  private final OrgBankAccountRepository orgBankAccountRepository;
   private final UserOrgMembershipRepository membershipRepository;
 
   public Organization getOrganization(Long id) {
@@ -71,5 +74,12 @@ public class OrganizationDomainService {
     return membershipRepository.existsByUserIdAndOrganizationIdAndRole(userId, organizationId, role);
   }
 
+  @Transactional
+  public List<OrgBankAccount> findOrgBankAccounts(Long orgId) {
+    // 조직 존재 검증(옵션이지만 안전)
+    organizationRepository.findById(orgId)
+        .orElseThrow(() -> new IllegalStateException("organization not found: " + orgId));
+    return orgBankAccountRepository.findAllByOrganizationId(orgId);
+  }
 
 }

@@ -1,6 +1,8 @@
 package com.joeun.api.organization.service;
 
 import com.joeun.api.organization.dto.MyOrganizationResponse;
+import com.joeun.api.organization.dto.OrgBankAccountResponse;
+import com.joeun.api.organization.mapper.OrgBankAccountMappers;
 import com.joeun.domain.organization.entity.Organization;
 import com.joeun.domain.organization.types.OrganizationType;
 import com.joeun.domain.users.entity.User;
@@ -98,6 +100,13 @@ public class OrganizationService {
         .isActive(Boolean.TRUE.equals(membership.getOrganization().isActive()))
         .role(membership.getRole().name())
         .build();
+  }
+
+  public List<OrgBankAccountResponse> listOrganizationBankAccounts(Long orgId /*, LoginUser loginUser*/) {
+    var accounts = organizationDomainService.findOrgBankAccounts(orgId);
+    return accounts.stream()
+        .map(OrgBankAccountMappers::toResponse)
+        .toList();
   }
 
 }

@@ -3,10 +3,14 @@ package com.joeun.service.deposit;
 import com.joeun.domain.deposit.entity.Deposit;
 import com.joeun.domain.deposit.repository.DepositRepository;
 import com.joeun.domain.deposit.types.DepositStatus;
+import com.joeun.domain.organization.entity.OrgBankAccount;
 import com.joeun.domain.organization.entity.Organization;
+import com.joeun.domain.organization.repository.OrgBankAccountRepository;
 import com.joeun.domain.organization.repository.OrganizationRepository;
 import com.joeun.domain.university.entity.University;
 import com.joeun.domain.users.entity.User;
+import com.joeun.domain.users.entity.UserBankAccount;
+import com.joeun.domain.users.repository.UserBankAccountRepository;
 import com.joeun.domain.users.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
@@ -25,6 +29,8 @@ public class DepositDomainService {
   private final UserRepository userRepo;
   private final OrganizationRepository orgRepo;
   private final DepositRepository depoRepo;
+  private final UserBankAccountRepository userBankAccountRepository;
+  private final OrgBankAccountRepository orgBankAccountRepo;
 
   public Page<Deposit> searchUserDepositsSimple(
       Long userId,
@@ -68,13 +74,22 @@ public class DepositDomainService {
       throw new IllegalStateException("user and organization tenant mismatch");
     }
 
+    UserBankAccount userPrimary = userBankAccountRepository
+        .findFirstByUserIdAndIsPrimaryTrue(userId)
+        .orElse(null);
+
+    OrgBankAccount orgPrimary =
+        orgBankAccountRepo.findFirstByOrganizationIdAndIsPrimaryTrue(organizationId)
+            .orElseThrow(() -> new IllegalStateException("no primary org bank account"));
+
     Deposit d = new Deposit();
     d.setUniversity(univ);
     d.setOrganization(org);
     d.setUser(user);
     d.setAmount(amount);
     d.setStatus(DepositStatus.HELD);
-    d.setRefundAccount(null);
+    d.setRefundAccount(userPrimary);
+    d.setOrgBankAccount(orgPrimary);
 
     return depoRepo.save(d);
   }

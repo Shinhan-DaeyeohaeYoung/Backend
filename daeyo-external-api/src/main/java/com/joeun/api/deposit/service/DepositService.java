@@ -81,7 +81,10 @@ public class DepositService {
     return dtos;
   }
 
-  public DepositCreateResponse createDeposit(LoginUser loginUser, DepositCreateRequest req) {
+  public DepositCreateResponse createDeposit(
+      LoginUser loginUser,
+      DepositCreateRequest req
+  ) {
     try {
       Deposit saved = depositDomainService.createDeposit(
           req.getUser_id(),

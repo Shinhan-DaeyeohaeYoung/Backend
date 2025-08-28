@@ -24,7 +24,6 @@ public final class DepositMappers {
         .build();
   }
 
-  // 신규: 생성 응답 매핑(도메인 엔티티만 입력 받음)
   public static DepositCreateResponse toCreateResponse(Deposit d) {
     if (d == null) return null;
     return DepositCreateResponse.builder()
@@ -35,6 +34,7 @@ public final class DepositMappers {
         .amount(d.getAmount())
         .status(d.getStatus())
         .refundAccountId(d.getRefundAccount() != null ? d.getRefundAccount().getId() : null)
+        .orgBankAccountId(d.getOrgBankAccount() != null ? d.getOrgBankAccount().getId() : null) // ★ 추가
         .createdAt(d.getCreatedAt())
         .updatedAt(d.getUpdatedAt())
         .build();

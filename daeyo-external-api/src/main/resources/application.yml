@@ -35,8 +35,6 @@ openai:
   model: gpt-4o-mini
   base-url: "${OPENAI_BASE_URL:https://api.openai.com}"
 
-
-
 file:
   storage: mock
   s3:
