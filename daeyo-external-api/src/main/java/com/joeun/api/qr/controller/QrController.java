@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -32,9 +33,6 @@ public class QrController {
     private final QrService qrService;
     private final OrganizationService organizationService;
 
-    private static boolean isAdminRole(String role) {
-        return role != null && (role.equals("ORG_ADMIN") || role.equals("ADMIN"));
-    }
 
     private MyOrganizationResponse pickMyOrg(LoginUser loginUser, Long organizationId) {
         var memberships = organizationService.getMyOrganizations(loginUser, "");
@@ -68,16 +66,15 @@ public class QrController {
     })
     @GetMapping(value = "/admin/org-qr.png", produces = MediaType.IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> orgQrPng(
-            @AuthenticationPrincipal LoginUser loginUser,
+            @RequestParam Long universityId,
             @RequestParam Long organizationId,
             @RequestParam(defaultValue = "SITE") String type,
             @RequestParam(required = false) Long siteId,
             @RequestParam(required = false) Long ttlSec,
             @RequestParam(required = false) Long nonce
     ) {
-        var m = pickMyOrg(loginUser, organizationId);
-        Long u = m.getUniversityId();
-        Long o = m.getOrganizationId();
+        Long u = universityId;
+        Long o = organizationId;
 
         byte[] png = qrService.generateOrgQrPng(u, o, type, siteId, ttlSec);
 
@@ -95,14 +92,13 @@ public class QrController {
     @Operation(summary = "조직 QR 메타(JSON) 발급")
     @GetMapping("/admin/org-qr/meta")
     public Map<String, Object> orgQrMeta(
-            @AuthenticationPrincipal LoginUser loginUser,
+            @RequestParam Long universityId,
             @RequestParam Long organizationId,
             @RequestParam(defaultValue = "SITE") String type,
             @RequestParam(required = false) Long siteId,
             @RequestParam(required = false) Long ttlSec
     ) {
-        var m = pickMyOrg(loginUser, organizationId);
-        Long u = m.getUniversityId();
+        Long u = universityId;
         Long o = organizationId;
 
         String token = qrService.buildOrgToken(u, o, type, siteId, ttlSec);
