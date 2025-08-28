@@ -76,6 +76,7 @@ public class AdminItemController {
     public PageResponse<ItemDtos.ItemSummaryResponse> adminList(
             @Parameter(hidden = true)
             @AuthenticationPrincipal LoginUser loginUser,
+            @Parameter(hidden = true)
             @PageableDefault(size = 20, sort = "id") Pageable pageable) {
         return PageResponse.from(app.listForUser(loginUser,pageable));
     }

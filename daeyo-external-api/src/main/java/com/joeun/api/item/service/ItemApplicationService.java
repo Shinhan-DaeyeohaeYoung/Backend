@@ -17,7 +17,9 @@ import com.joeun.service.rental.RentalDomainService;
 import com.joeun.service.waitlist.WaitlistDomainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -331,5 +333,16 @@ public class ItemApplicationService {
 
         itemDomainService.deleteUnitByAssetNo(u, o, itemId, assetNo);
     }
+    private static final Set<String> ALLOWED_SORTS =
+            Set.of("id","name","totalQuantity","availableQuantity","isActive"); // 실제 엔티티 필드로 채우기
 
+    private Pageable safe(Pageable p) {
+        if (p == null) return PageRequest.of(0, 20, Sort.by(Sort.Order.desc("id")));
+        var safeOrders = p.getSort().stream()
+                .filter(o -> ALLOWED_SORTS.contains(o.getProperty()))
+                .map(o -> new Sort.Order(o.getDirection(), o.getProperty()))
+                .toList();
+        Sort sort = safeOrders.isEmpty() ? Sort.by(Sort.Order.desc("id")) : Sort.by(safeOrders);
+        return PageRequest.of(p.getPageNumber(), p.getPageSize(), sort);
+    }
 }
