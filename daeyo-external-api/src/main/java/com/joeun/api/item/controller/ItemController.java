@@ -15,7 +15,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.converters.models.PageableAsQueryParam;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -27,51 +29,25 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Validated
 @RequestMapping("/api")
-@SecurityRequirement(name = "Authorization")
 @Tag(name = "Items", description = "사용자용 아이템 조회 API")
 public class ItemController {
 
     private final ItemApplicationService app;
     @Operation(
-            summary = "아이템 목록(사용자)",
-            description = "사용자 관점의 아이템 페이지 목록을 조회합니다. 썸네일(커버) 키 등 요약 정보 포함."
+            summary = "아이템 목록",
+            parameters = {
+                    @Parameter(name = "page", example = "0"),
+                    @Parameter(name = "size", example = "20"),
+                    @Parameter(name = "sort", example = "id,desc")
+            }
     )
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "목록 조회 성공",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = PageResponse.class),
-                            examples = @ExampleObject(
-                                    value = """
-                    {
-                      "content": [
-                        {
-                          "id": 1,
-                          "universityId": 1,
-                          "organizationId": 2,
-                          "name": "충전기",
-                          "totalQuantity": 2,
-                          "availableQuantity": 2,
-                          "isActive": true,
-                          "coverKey": "univ/1/items/1/units/501.jpg"
-                        }
-                      ],
-                      "page": 0,
-                      "size": 20,
-                      "totalElements": 1
-                    }
-                    """
-                            )
-                    )
-            )
-    })
+    @PageableAsQueryParam
     @GetMapping("/items")
     public PageResponse<ItemDtos.ItemSummaryResponse> list(
             @Parameter(hidden = true)
             @AuthenticationPrincipal LoginUser loginUser,
-            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+            @Parameter(hidden = true)
+            @PageableDefault(sort = "id", direction = Sort.Direction.DESC) Pageable pageable){
         System.out.println(loginUser.id());
         return PageResponse.from(app.listForUser(loginUser, pageable));
     }
@@ -117,6 +93,7 @@ public class ItemController {
             ),
             @ApiResponse(responseCode = "404", description = "아이템 없음")
     })
+    @PageableAsQueryParam
     @GetMapping("/items/{itemId}")
     public ItemDtos.ItemDetailResponse userDetail(
             @PathVariable Long itemId,
