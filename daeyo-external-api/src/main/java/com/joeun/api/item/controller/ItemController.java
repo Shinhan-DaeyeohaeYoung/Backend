@@ -18,14 +18,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
+@Validated
 @RequestMapping("/api")
-@SecurityRequirement(name = "bearerAuth")
+@SecurityRequirement(name = "Authorization")
 @Tag(name = "Items", description = "사용자용 아이템 조회 API")
 public class ItemController {
 
@@ -70,7 +72,7 @@ public class ItemController {
             @Parameter(hidden = true)
             @AuthenticationPrincipal LoginUser loginUser,
             @PageableDefault(size = 20, sort = "id") Pageable pageable) {
-
+        System.out.println(loginUser.id());
         return PageResponse.from(app.listForUser(loginUser, pageable));
     }
     @Operation(
