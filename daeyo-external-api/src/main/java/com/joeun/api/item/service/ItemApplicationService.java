@@ -11,6 +11,7 @@ import com.joeun.domain.item.entity.IndividualItem;
 import com.joeun.domain.item.service.ItemDomainService;
 import com.joeun.domain.item.service.UnitPhotoDomainService;
 import com.joeun.domain.rental.entity.Rental;
+import com.joeun.domain.waitlist.entity.WaitlistStatus;
 import com.joeun.global.config.LoginUser;
 import com.joeun.infra.aws.s3.service.ImageInfraService;
 import com.joeun.service.organization.OrganizationDomainService;
@@ -126,6 +127,7 @@ public class ItemApplicationService {
                             i.getAvailableQuantity(),
                             waitlistDomainService.getWaitListCount(i.getId()),
                             i.getIsActive(),
+                            waitlistDomainService.existsWaitListByItemIdAndUserIdAndStatus(i.getId(), loginUser.id(), WaitlistStatus.WAITING),
                             coverUrl
                     );
                 });
@@ -151,6 +153,7 @@ public class ItemApplicationService {
                             i.getAvailableQuantity(),
                             waitlistDomainService.getWaitListCount(i.getId()),
                             i.getIsActive(),
+                            waitlistDomainService.existsWaitListByItemIdAndUserIdAndStatus(i.getId(), loginUser.id(), WaitlistStatus.WAITING),
                             cover == null ? null : cover.getImageKey()
                     );
                 });

@@ -70,4 +70,18 @@ public interface WaitlistRepository extends JpaRepository<Waitlist, Long> {
     List<Waitlist> findAllByItemIdAndStatusOrderByJoinedAtAsc(Long itemId, WaitlistStatus waitlistStatus);
 
     boolean existsByItemIdAndUserIdAndStatusIn(Long itemId, Long id, List<WaitlistStatus> waiting);
+
+    Boolean existsByItemIdAndUserIdAndStatus(Long itemId, Long userId, WaitlistStatus waitlistStatus);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = false)
+    @Query("""
+          update Waitlist w
+             set w.status = com.joeun.domain.waitlist.entity.WaitlistStatus.CANCELLED
+           where w.id = :id
+             and w.status in (
+               com.joeun.domain.waitlist.entity.WaitlistStatus.WAITING,
+               com.joeun.domain.waitlist.entity.WaitlistStatus.OFFERED
+             )
+        """)
+    void markCancelledById(@Param("id") Long id);
 }
