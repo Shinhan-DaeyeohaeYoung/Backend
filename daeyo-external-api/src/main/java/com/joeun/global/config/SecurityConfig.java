@@ -59,8 +59,10 @@ public class SecurityConfig {
             .requestMatchers("/api/organizations/**").permitAll()
             .requestMatchers("/api/deposits/**").permitAll()
             .requestMatchers("/api/students/**").permitAll()
+                        .requestMatchers( "/api/admin/org-qr.png", "/api/admin/org-qr/meta").permitAll()
 
-            .requestMatchers("/error").permitAll()
+
+                        .requestMatchers("/error").permitAll()
             .requestMatchers("/swagger-ui/**", "/v3/api-docs/**","/swagger-ui.html").permitAll()
 
             .anyRequest().authenticated()
