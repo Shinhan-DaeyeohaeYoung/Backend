@@ -128,10 +128,8 @@ public class RentalApplicationService {
                 ));
     }
 
-    /** 승인(관리자): rentalId의 (u,o) 확인 + org 관리자 권한 확인 후 승인 */
     public RentalDtos.ApproveResponse approve(LoginUser loginUser, Long rentalId) {
         UO uo = resolveRentalUO(rentalId);
-        assertAdmin(loginUser, uo.o); // 관리자만
 
         var approved = domain.approveReservation(uo.u, uo.o, rentalId, loginUser.id());
         return new RentalDtos.ApproveResponse(
