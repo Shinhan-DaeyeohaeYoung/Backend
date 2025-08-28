@@ -1,11 +1,14 @@
 package com.joeun.api.rental.service;
-import com.joeun.domain.rental.entity.RentalStatus;
 
+import com.joeun.api.organization.dto.MyOrganizationResponse;
+import com.joeun.api.organization.service.OrganizationService;
 import com.joeun.api.rental.dto.RentalDtos;
 import com.joeun.api.rental.dto.RentalDtos.*;
-import com.joeun.api.security.TenantProvider;
+import com.joeun.domain.item.entity.Item;
+import com.joeun.domain.item.service.ItemDomainService;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.rental.entity.RentalStatus;
+import com.joeun.global.config.LoginUser;
 import com.joeun.service.rental.RentalDomainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -13,36 +16,108 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class RentalApplicationService {
 
-    private final TenantProvider tenant;
     private final RentalDomainService domain;
+    private final ItemDomainService itemDomainService;          //  itemId → (u,o) 해석용
+    private final OrganizationService organizationService;      //  멤버십/권한 확인용
 
     private static final DateTimeFormatter F = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
-    public ReserveResponse reserve(Long userId, ReserveRequest req) {
-        Long u = tenant.universityId(), o = tenant.organizationId();
+    /* ===================== 공통 헬퍼 ===================== */
+
+    private static boolean isAdminRole(String role) {
+        return role != null && (role.equals("ORG_ADMIN") || role.equals("ADMIN"));
+    }
+
+    /** 내 모든 멤버십 orgId 집합 */
+    private Set<Long> myOrgIds(LoginUser loginUser) {
+        return organizationService.getMyOrganizations(loginUser, "")
+                .stream()
+                .map(MyOrganizationResponse::getOrganizationId)
+                .collect(Collectors.toSet());
+    }
+
+    /** 해당 org에 대해 내가 관리자임을 보장 (아니면 403) */
+    private void assertAdmin(LoginUser loginUser, Long orgId) {
+        var m = organizationService.getMyOrganizations(loginUser, "")
+                .stream()
+                .filter(x -> Objects.equals(x.getOrganizationId(), orgId))
+                .findFirst()
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN, "No membership for organizationId=" + orgId));
+
+        if (!isAdminRole(m.getRole())) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Organization admin only");
+        }
+    }
+
+    /** itemId가 속한 (u,o)를 내 멤버십으로 해석 (없으면 404) */
+    private Item resolveItemAccessible(LoginUser loginUser, Long itemId) {
+        // 사용자 멤버십(org→univ) 맵
+        var orgMap = organizationService.getMyOrganizations(loginUser, "")
+                .stream()
+                .collect(Collectors.toMap(
+                        MyOrganizationResponse::getOrganizationId,
+                        MyOrganizationResponse::getUniversityId,
+                        (a, b) -> a,
+                        LinkedHashMap::new
+                ));
+
+        for (var e : orgMap.entrySet()) {
+            Long o = e.getKey(), u = e.getValue();
+            try {
+                return itemDomainService.getByTenant(u, o, itemId);
+            } catch (NoSuchElementException ignore) { /* 다른 멤버십으로 시도 */ }
+        }
+        throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.NOT_FOUND,
+                "Item not found in your memberships");
+    }
+
+    /** rentalId의 (u,o) 가져오기 (엔티티에서 읽음) */
+    private UO resolveRentalUO(Long rentalId) {
+        // NOTE: Rental 엔티티 접근 메서드는 프로젝트에 맞게 사용하세요.
+        // 여기서는 읽기 전용으로 가져온다고 가정.
+        Rental r = domain.getById(rentalId); // ← 도메인에 조회 메서드가 있어야 합니다.
+        if (r == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.NOT_FOUND, "Rental not found");
+        }
+        return new UO(r.getUniversityId(), r.getOrganizationId());
+    }
+
+    private record UO(Long u, Long o) {}
+
+    /* ===================== 예약/조회 API ===================== */
+
+    /** 예약: 사용자 멤버십으로 itemId의 (u,o) 해석 후 예약 */
+    public ReserveResponse reserve(LoginUser loginUser, ReserveRequest req) {
+        Item item = resolveItemAccessible(loginUser, req.itemId());
+        Long u = item.getUniversityId(), o = item.getOrganizationId();
+
         int ttl = (req.ttlMinutes() == null || req.ttlMinutes() <= 0) ? 30 : req.ttlMinutes();
-        Long rentalId = domain.reserveUnit(u, o, userId, req.itemId(), req.unitId(), ttl);
-        // 간단 응답(필요시 재조회로 시간 채우기)
+        Long rentalId = domain.reserveUnit(u, o, loginUser.id(), req.itemId(), req.unitId(), ttl);
+
         return new ReserveResponse(rentalId, req.itemId(), req.unitId(), null, null, "RESERVED");
     }
 
-    public Page<Rental> myReserved(Long userId, Pageable pageable) {
-        Long u = tenant.universityId();
-        return domain.listMyActiveReservations(u, userId, pageable);
+    /** 내 예약(간단 엔티티) */
+    public Page<Rental> myReserved(LoginUser loginUser, Pageable pageable) {
+        Long u = loginUser.universityId();
+        return domain.listMyActiveReservations(u, loginUser.id(), pageable);
     }
-    public Page<RentalDtos.ReservationSummary> listMyReservations(Long userId, Pageable pageable) {
-        Long u = tenant.universityId();
-        return domain.listMyActiveReservations(u, userId, pageable)
+
+    /** 내 예약(요약 DTO) */
+    public Page<RentalDtos.ReservationSummary> listMyReservations(LoginUser loginUser, Pageable pageable) {
+        Long u = loginUser.universityId();
+        return domain.listMyActiveReservations(u, loginUser.id(), pageable)
                 .map(r -> new RentalDtos.ReservationSummary(
                         r.getId(),
                         r.getItem().getId(),
@@ -53,9 +128,10 @@ public class RentalApplicationService {
                 ));
     }
 
-    public RentalDtos.ApproveResponse approve(Long userId, Long rentalId) {
-        Long u = tenant.universityId(), o = tenant.organizationId();
-        var approved = domain.approveReservation(u, o, rentalId, userId);
+    public RentalDtos.ApproveResponse approve(LoginUser loginUser, Long rentalId) {
+        UO uo = resolveRentalUO(rentalId);
+
+        var approved = domain.approveReservation(uo.u, uo.o, rentalId, loginUser.id());
         return new RentalDtos.ApproveResponse(
                 approved.id(),
                 approved.status().name(),
@@ -63,31 +139,35 @@ public class RentalApplicationService {
         );
     }
 
-    public void cancel(Long userId, Long rentalId) {
-        Long u = tenant.universityId(), o = tenant.organizationId();
-        domain.cancelReservation(u, o, rentalId, userId);
+    /** 취소: rentalId의 (u,o) 확인 후 취소 (도메인에서 본인/관리자 권한 판정) */
+    public void cancel(LoginUser loginUser, Long rentalId) {
+        UO uo = resolveRentalUO(rentalId);
+        domain.cancelReservation(uo.u, uo.o, rentalId, loginUser.id());
     }
 
-    public boolean possible(Long userId, Long rentalId) {
-        Long u = tenant.universityId(), o = tenant.organizationId();
-        return domain.isRentalPossible(u, o, rentalId, userId);
+    /** 대여 가능 여부 확인 */
+    public boolean possible(LoginUser loginUser, Long rentalId) {
+        UO uo = resolveRentalUO(rentalId);
+        return domain.isRentalPossible(uo.u, uo.o, rentalId, loginUser.id());
     }
+
+    /** 내 대여/예약 히스토리 */
     public Page<RentalDtos.RentalHistoryItem> listMyRentalHistory(
-            Long userId,
-            String statusCsv,                 // "RENTED,RETURNED" 형태. null/빈값이면 전체
-            String fromIso,                   // ISO-8601 문자열. null 허용
-            String toIso,                     // ISO-8601 문자열. null 허용
+            LoginUser loginUser,
+            String statusCsv,
+            String fromIso,
+            String toIso,
             boolean includeExpiredReservations,
             Pageable pageable
     ) {
-        Long u = tenant.universityId();
+        Long u = loginUser.universityId();
 
         Set<RentalStatus> statuses = parseStatuses(statusCsv);
         LocalDateTime from = parseDateTime(fromIso);
         LocalDateTime to = parseDateTime(toIso);
 
         Page<Rental> page = domain.listMyHistory(
-                u, userId, statuses, from, to, includeExpiredReservations, pageable
+                u, loginUser.id(), statuses, from, to, includeExpiredReservations, pageable
         );
 
         final LocalDateTime now = LocalDateTime.now();
@@ -112,38 +192,16 @@ public class RentalApplicationService {
         });
     }
 
-    // ---------- helpers ----------
-    private Set<RentalStatus> parseStatuses(String statusCsv) {
-        if (statusCsv == null || statusCsv.isBlank()) return Collections.emptySet();
-        return Arrays.stream(statusCsv.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .map(String::toUpperCase)
-                .map(RentalStatus::valueOf) // 잘못된 값이면 IllegalArgumentException → @ControllerAdvice에서 400 처리 권장
-                .collect(Collectors.toCollection(() -> EnumSet.noneOf(RentalStatus.class)));
-    }
-
-    private LocalDateTime parseDateTime(String iso) {
-        if (iso == null || iso.isBlank()) return null;
-        return LocalDateTime.parse(iso, F);
-    }
+    /* ===================== 현재 대여중 ===================== */
 
     private static final Set<String> ALLOWED_SORTS = Set.of(
-            "id",
-            "status",
-            "reservedAt",
-            "reserveExpiresAt",
-            "rentedAt",
-            "dueAt",
-            "returnedAt",
-            "organizationId",
-            "universityId",
-            "userId"
+            "id", "status", "reservedAt", "reserveExpiresAt",
+            "rentedAt", "dueAt", "returnedAt",
+            "organizationId", "universityId", "userId"
     );
 
     private Pageable sanitizeSort(Pageable pageable, String fallbackProperty) {
         if (pageable == null) return PageRequest.of(0, 20, Sort.by(Sort.Order.desc(fallbackProperty)));
-
         Sort safe = Sort.unsorted();
         for (Sort.Order o : pageable.getSort()) {
             String p = o.getProperty();
@@ -151,18 +209,16 @@ public class RentalApplicationService {
                 safe = safe.and(Sort.by(new Sort.Order(o.getDirection(), p)));
             }
         }
-        if (safe.isUnsorted()) {
-            safe = Sort.by(Sort.Order.desc(fallbackProperty)); // 기본 정렬
-        }
+        if (safe.isUnsorted()) safe = Sort.by(Sort.Order.desc(fallbackProperty));
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), safe);
     }
 
-    // --- 사용처 1: 내 대여중 전체 (/rentals/myitems)
-    public Page<RentalDtos.CurrentRentalItem> listMyCurrentRentals(Long userId, Pageable pageable) {
-        Long u = tenant.universityId();
-        Pageable safe = sanitizeSort(pageable, "rentedAt"); // ✅ string 같은 값 걸러짐
+    /** 내 대여중 전체 */
+    public Page<RentalDtos.CurrentRentalItem> listMyCurrentRentals(LoginUser loginUser, Pageable pageable) {
+        Long u = loginUser.universityId();
+        Pageable safe = sanitizeSort(pageable, "rentedAt");
 
-        Page<Rental> page = domain.listMyCurrentRentals(u, userId, safe);
+        Page<Rental> page = domain.listMyCurrentRentals(u, loginUser.id(), safe);
         return page.map(r -> new RentalDtos.CurrentRentalItem(
                 r.getId(),
                 r.getUniversityId(),
@@ -175,19 +231,24 @@ public class RentalApplicationService {
                 r.getDueAt() == null ? null : r.getDueAt().format(F),
                 r.getReturnedAt() == null ? null : r.getReturnedAt().format(F),
                 r.getStatus().name(),
-                /* depositId: 엔티티 구조에 맞게 */
-                null
+                null /* depositId 등 필요시 추가 */
         ));
     }
 
-    // --- 사용처 2: 조직별 내 대여중 (/rentals/myitems/organizations/{organizationId})
+    /** 조직별 내 대여중 (조직 멤버십 확인) */
     public Page<RentalDtos.CurrentRentalItem> listMyCurrentRentalsByOrganization(
-            Long userId, Long organizationId, Pageable pageable
+            LoginUser loginUser, Long organizationId, Pageable pageable
     ) {
-        Long u = tenant.universityId();
-        Pageable safe = sanitizeSort(pageable, "rentedAt"); // ✅ 동일하게 보호
+        // 내가 그 조직 멤버인지 확인
+        if (!myOrgIds(loginUser).contains(organizationId)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "No membership for organizationId=" + organizationId);
+        }
 
-        Page<Rental> page = domain.listMyCurrentRentalsByOrganization(u, organizationId, userId, safe);
+        Long u = loginUser.universityId();
+        Pageable safe = sanitizeSort(pageable, "rentedAt");
+
+        Page<Rental> page = domain.listMyCurrentRentalsByOrganization(u, organizationId, loginUser.id(), safe);
         return page.map(r -> new RentalDtos.CurrentRentalItem(
                 r.getId(),
                 r.getUniversityId(),
@@ -200,17 +261,20 @@ public class RentalApplicationService {
                 r.getDueAt() == null ? null : r.getDueAt().format(F),
                 r.getReturnedAt() == null ? null : r.getReturnedAt().format(F),
                 r.getStatus().name(),
-                /* depositId: 엔티티 구조에 맞게 */
                 null
         ));
     }
 
-
+    /** 조직별 내 예약 리스트 (조직 멤버십 확인) */
     public Page<RentalDtos.ReservationSummary> listMyReservationsByOrganization(
-            Long userId, Long organizationId, Pageable pageable
+            LoginUser loginUser, Long organizationId, Pageable pageable
     ) {
-        Long u = tenant.universityId();
-        return domain.listMyActiveReservationsByOrganization(u, organizationId, userId, pageable)
+        if (!myOrgIds(loginUser).contains(organizationId)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "No membership for organizationId=" + organizationId);
+        }
+        Long u = loginUser.universityId();
+        return domain.listMyActiveReservationsByOrganization(u, organizationId, loginUser.id(), pageable)
                 .map(r -> new RentalDtos.ReservationSummary(
                         r.getId(),
                         r.getItem().getId(),
@@ -221,4 +285,20 @@ public class RentalApplicationService {
                 ));
     }
 
+    /* ===================== 파싱 헬퍼 ===================== */
+
+    private Set<RentalStatus> parseStatuses(String statusCsv) {
+        if (statusCsv == null || statusCsv.isBlank()) return Collections.emptySet();
+        return Arrays.stream(statusCsv.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(String::toUpperCase)
+                .map(RentalStatus::valueOf)
+                .collect(Collectors.toCollection(() -> EnumSet.noneOf(RentalStatus.class)));
+    }
+
+    private LocalDateTime parseDateTime(String iso) {
+        if (iso == null || iso.isBlank()) return null;
+        return LocalDateTime.parse(iso, F);
+    }
 }

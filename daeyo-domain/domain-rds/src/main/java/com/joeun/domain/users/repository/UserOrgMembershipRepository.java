@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface UserOrgMembershipRepository extends JpaRepository<UserOrgMembership, Long> {
   boolean existsByUserIdAndOrganizationId(Long userId, Long organizationId);
@@ -21,7 +22,7 @@ public interface UserOrgMembershipRepository extends JpaRepository<UserOrgMember
       left join fetch o.parent p
       where m.id.userId = :userId
       """)
-  List<UserOrgMembership> findAllWithOrganizationByUserId(Long userId);
+  List<UserOrgMembership> findAllWithOrganizationByUserId(@Param("userId") Long userId);
 
   @Query("""
       select m

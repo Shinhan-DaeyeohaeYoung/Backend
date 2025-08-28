@@ -51,7 +51,7 @@ public class SecurityConfig {
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
         .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/**").permitAll() // TODO: 전체 오픈(추후 수정)
+//                .requestMatchers("/**").permitAll() // TODO: 전체 오픈(추후 수정)
             // 학교 조회
             .requestMatchers(HttpMethod.GET, "/api/universities", "/api/universities/**").permitAll()
             // 회원가입 / 로그인 허용
@@ -59,8 +59,10 @@ public class SecurityConfig {
             .requestMatchers("/api/organizations/**").permitAll()
             .requestMatchers("/api/deposits/**").permitAll()
             .requestMatchers("/api/students/**").permitAll()
+                        .requestMatchers( "/api/admin/org-qr.png", "/api/admin/org-qr/meta").permitAll()
 
-            .requestMatchers("/error").permitAll()
+
+                        .requestMatchers("/error").permitAll()
             .requestMatchers("/swagger-ui/**", "/v3/api-docs/**","/swagger-ui.html").permitAll()
 
             .anyRequest().authenticated()

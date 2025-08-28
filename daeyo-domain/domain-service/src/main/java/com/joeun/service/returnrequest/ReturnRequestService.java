@@ -1,17 +1,21 @@
-package com.joeun.domain.returnrequest.service;
+package com.joeun.service.returnrequest;
 
+import com.joeun.domain.item.entity.IndividualItem;
 import com.joeun.domain.item.repository.IndividualItemRepository;
 import com.joeun.domain.item.repository.UnitPhotoRepository;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.rental.entity.RentalStatus;
 import com.joeun.domain.rental.repository.RentalRepository;
+import com.joeun.domain.reservation.service.ReservationRedisService;
 import com.joeun.domain.returnrequest.entity.ReturnRequest;
 import com.joeun.domain.returnrequest.entity.ReturnRequestStatus;
 import com.joeun.domain.returnrequest.repository.ReturnRequestRepository;
+import com.joeun.domain.waitlist.entity.Waitlist;
+import com.joeun.service.rental.RentalDomainService;
+import com.joeun.service.waitlist.WaitlistDomainService;
 import jakarta.persistence.EntityNotFoundException;
 
-import org.hibernate.engine.jdbc.connections.spi.AbstractMultiTenantConnectionProvider;
-import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,6 +25,7 @@ import com.joeun.domain.item.entity.UnitPhoto;
 
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +35,9 @@ public class ReturnRequestService {
     private final RentalRepository rentalRepository;
     private final UnitPhotoRepository unitPhotoRepository;
     private final IndividualItemRepository individualItemRepository;
+    private final WaitlistDomainService waitlistDomainService;
+    private final RentalDomainService rentalDomainService;
+    private final ReservationRedisService reservationRedisService;
 
 
     /* ================== 조회 (관리자) ================== */
@@ -90,38 +98,89 @@ public class ReturnRequestService {
 
     /* ================== 승인 (관리자) ================== */
     @Transactional
-    public ReturnRequest approve(Long approverUserId, Long id) {
-        // 그냥 임의 값 고정
-        Long u = 1L;
-        Long o = 2L;
+    public ReturnRequest approve(Long approverUserId,Long universityid, Long id, Long organizationId, String imageKey) {
+        // 0) 우선 조회해서 테넌트(u,o) 확보
+        ReturnRequest found = returnRequestRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("ReturnRequest not found: id=" + id));
 
-        // 1) 반납 신청 건 가져오기
-        ReturnRequest rr = returnRequestRepository.lockByIdAndTenant(id, u, o)
+        // 1) 잠금 + 테넌트 확인
+        ReturnRequest rr = returnRequestRepository.lockByIdAndTenant(id, universityid, organizationId)
                 .orElseThrow(() -> new NoSuchElementException(
-                        "returnRequest not found: id=%d, univ=%d, org=%d".formatted(id, u, o)));
+                        "returnRequest not found: id=%d, univ=%d, org=%d".formatted(id, universityid, organizationId)));
 
-        // 2) 승인 처리
-        rr.approve(approverUserId, LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        rr.approve(approverUserId, now);
 
-        this.markRentalReturnedByReturnApproval(u, o, rr.getRental().getId(), approverUserId);
+        // 3) RENTAL 상태 전이(RETURNED)
+        this.markRentalReturnedByReturnApproval(universityid, organizationId, rr.getRental().getId(), approverUserId);
 
-        // 3) 개별 상품 AVAILABLE 처리
+        // 4) 유닛 AVAILABLE 전환
         Long unitId = rr.getRental().getUnit().getId();
-        var unit = individualItemRepository.findById(unitId)
+        IndividualItem unit = individualItemRepository.findById(unitId)
                 .orElseThrow(() -> new NoSuchElementException("unit not found: id=" + unitId));
+
+        reservationRedisService.revertReserve(unitId, rr.getRental().getOfferToken());
+
+        Optional<Waitlist> next = waitlistDomainService.getNextOutstandingWaitlist(rr.getRental().getItem().getId());
+        if (next.isPresent()) {
+            Waitlist w = next.get();
+
+            unit.markWaitReserved();
+
+            waitlistDomainService.offerReserveAndNotify(
+                    w.getId(), now, unitId, universityid, organizationId
+            );
+
+            waitlistDomainService.markFulfilledById(w.getId(), now);
+            return rr;
+        }
+
         unit.markAvailable();
 
+        // 5) UnitPhoto upsert (반납 신청 시 제출한 사진으로 교체)
+        upsertUnitPhotoWithSubmittedImage(rr, unitId, universityid, organizationId);
+
+        unit.getItem().returnOne();
+        unit.getItem().activeOn();
         return rr;
     }
 
+    private void upsertUnitPhotoWithSubmittedImage(ReturnRequest rr, Long unitId, Long u, Long o) {
+        String key  = rr.getSubmittedImageKey();   // 엔티티 필드명에 맞게 사용
+        String mime = rr.getSubmittedImageMime();  // 없으면 null 허용
+        String hash = rr.getSubmittedImageHash();  // 없으면 null 허용
+
+        if (key == null || key.isBlank()) {
+            // 제출된 사진이 없으면 스킵
+            return;
+        }
+
+        var opt = unitPhotoRepository
+                .findByUnit_IdAndUniversityIdAndOrganizationId(unitId, u, o)
+                .or(() -> unitPhotoRepository.findByUnit_Id(unitId)); // 테넌트 없는 과거 레코드 호환
+
+        if (opt.isPresent()) {
+            // 변경 감지 방식 (도메인 메서드 활용)
+            opt.get().replacePhoto(key, mime, hash);
+        } else {
+            // 없으면 생성
+            var unitRef = individualItemRepository.getReferenceById(unitId);
+            UnitPhoto up = UnitPhoto.builder()
+                    .unit(unitRef)
+                    .universityId(u)
+                    .organizationId(o)
+                    .imageKey(key)
+                    .mime(mime)
+                    .hash(hash)
+                    .build();
+            unitPhotoRepository.save(up);
+        }
+    }
 
 
     /* ================== 취소 (유저) ================== */
     @Transactional
-    public ReturnRequest cancel(Long id, Long actorUserId) {
-        Long u = 1L;
-        Long o = 2L;
-
+    public ReturnRequest cancel(Long id, Long actorUserId,Long u, Long o) {
         ReturnRequest rr = returnRequestRepository.lockByIdAndTenant(id, u, o)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "ReturnRequest not found: id=%d, univ=%d, org=%d".formatted(id, u, o)));
@@ -152,19 +211,6 @@ public class ReturnRequestService {
     // 조직 ID를 모르는 유저 취소 케이스용(테넌트 테이블 구조에 맞춰 수정 가능)
     private Long getOrgIdOrZero() { return 0L; }
 
-//    /* ================== 손상률/제안 (GPT) ================== */
-//    @Transactional(readOnly = true)
-//    public DamageSuggestionResult getDamageSuggestions(Long universityId, Long id, Long actorUserIdOrNull) {
-//        ReturnRequest rr = returnRequestRepository.findById(id)
-//                .orElseThrow(() -> new EntityNotFoundException("ReturnRequest not found"));
-//        // 권한 체크(관리자 or 본인): 필요 시 보강.
-//
-//        // 기존 사진(대여 당시 사진) & 반납 사진(제출 이미지)을 준비
-//        String beforeImageKey = extractBeforeImageKey(rr); // rental/item/unit 등에서 꺼내는 로직 구현
-//        String afterImageKey  = rr.getSubmittedImageKey();
-//
-//        return damageService.assessDamage(beforeImageKey, afterImageKey, rr.getUniversityId(), rr.getOrganizationId(), rr.getId());
-//    }
 
     //반납 전에 원래 등록돼 있던 사진키 불러오기
     private String extractBeforeImageKey(ReturnRequest rr) {
@@ -172,8 +218,8 @@ public class ReturnRequestService {
         Long unitId = rr.getRental().getUnit().getId();
         if (unitId == null) return null;
 
-        Long u = 1L;
-        Long o = 2L;
+        Long u = rr.getUniversityId();
+        Long o = rr.getOrganizationId();
 
         return unitPhotoRepository
                 .findByUnit_IdAndUniversityIdAndOrganizationId(unitId, u, o)

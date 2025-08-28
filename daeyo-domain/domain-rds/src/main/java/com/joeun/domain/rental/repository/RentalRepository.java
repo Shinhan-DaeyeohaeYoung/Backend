@@ -24,7 +24,8 @@ public interface RentalRepository extends JpaRepository<Rental, Long>,JpaSpecifi
             Long universityId, Long userId, RentalStatus status, LocalDateTime now, Pageable pageable);
 
     @Query("""
-           select r from Rental r
+
+            select r from Rental r
            where r.id = :id and r.universityId = :u and r.organizationId = :o
            """)
     Optional<Rental> findByIdAndTenant(@Param("u") Long universityId,
@@ -51,15 +52,16 @@ public interface RentalRepository extends JpaRepository<Rental, Long>,JpaSpecifi
     @Query(value = """
         SELECT r.id          AS id,
                r.individual_item_id     AS individualItemId,
+               r.item_id  AS itemId,
                r.offer_token AS offerToken
         FROM rental r
         WHERE r.status = 'RESERVED'
-          AND r.reserve_expires_at <= NOW(6)
+          AND r.reserve_expires_at <= :now
         ORDER BY r.reserve_expires_at, r.id
         LIMIT :limit
         FOR UPDATE SKIP LOCKED
         """, nativeQuery = true)
-    List<ExpiredRentalRow> lockExpiredBatch(@Param("limit") int limit);
+    List<ExpiredRentalRow> lockExpiredBatch(@Param("limit") int limit, @Param("now") LocalDateTime now);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
@@ -86,5 +88,6 @@ public interface RentalRepository extends JpaRepository<Rental, Long>,JpaSpecifi
             LocalDateTime now,
             Pageable pageable
     );
-
+    @Query("select r.unit.id from Rental r where r.id = :rentalId")
+    Optional<Long> findUnitIdByRentalId(@Param("rentalId") Long rentalId);
 }

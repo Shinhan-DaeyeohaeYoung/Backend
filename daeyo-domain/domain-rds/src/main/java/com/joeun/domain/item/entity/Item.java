@@ -87,4 +87,22 @@ public class Item {
         if (isActive != null) this.isActive = isActive;
         return this;
     }
+
+    //삭제 시 사용
+    public void setTotalQuantity(int total) {
+        if (total < 0) {
+            throw new IllegalArgumentException("totalQuantity cannot be negative");
+        }
+        this.totalQuantity = total;
+
+        // 가용 수량은 총수량을 초과할 수 없음
+        if (this.availableQuantity > total) {
+            this.availableQuantity = total;
+        }
+    }
+
+
+    public void activeOn() {
+        this.isActive = true;
+    }
 }

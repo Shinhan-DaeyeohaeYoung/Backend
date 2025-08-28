@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class UserDomainService {
+public class  UserDomainService {
 
   private final UserRepository userRepo;
   private final UniversityRepository univRepo;

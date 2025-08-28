@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.3.5'
+    id 'org.springframework.boot' version '3.3.5' apply false
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -17,9 +17,6 @@ repositories {
     mavenCentral()
 }
 
-bootJar {enabled = false}
-jar {enabled = true}
-
 allprojects {
     group = 'com.joeun'
     version = '0.0.1-SNAPSHOT'
@@ -30,10 +27,16 @@ subprojects {
     apply plugin: "java"
     apply plugin: 'java-library'
     apply plugin: "io.spring.dependency-management"
-    apply plugin: "org.springframework.boot"
+//    apply plugin: "org.springframework.boot"
 
     repositories {
         mavenCentral()
+    }
+
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.boot:spring-boot-dependencies:3.3.5"
+        }
     }
 
     configurations {
