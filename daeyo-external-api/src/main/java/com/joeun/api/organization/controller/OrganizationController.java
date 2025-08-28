@@ -26,14 +26,14 @@ public class OrganizationController {
 
   private final OrganizationService orgService;
 
-  @PostMapping
+/*  @PostMapping
   public ResponseEntity<UserOrgMembershipResponse> joinOrganization(
        @RequestBody @Valid OrganizationJoinRequest req,
       @AuthenticationPrincipal LoginUser loginUser
    ) {
          var membership = orgService.joinOrganization(loginUser, req.getOrganizationId());
          return ResponseEntity.status(HttpStatus.CREATED).body(UserOrgMembershipResponse.from(membership));
-  }
+  }*/
 
   @GetMapping
   public ResponseEntity<List<MyOrganizationResponse>> getMyOrganizations(

@@ -9,14 +9,18 @@ public final class DepositMappers {
   private DepositMappers() {}
 
   public static DepositListDto toListDto(Deposit d) {
-    if (d == null) return null;
     return DepositListDto.builder()
         .id(d.getId())
         .amount(d.getAmount())
         .status(d.getStatus())
         .createdAt(d.getCreatedAt())
         .updatedAt(d.getUpdatedAt())
-        .refundAccountId(d.getRefundAccount() != null ? d.getRefundAccount().getId() : null)
+        .refundAccountId(
+            d.getRefundAccount() != null ? d.getRefundAccount().getId() : null
+        )
+        .userName(
+            d.getUser() != null ? d.getUser().getName() : null
+        )
         .build();
   }
 

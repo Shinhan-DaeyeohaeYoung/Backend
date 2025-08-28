@@ -17,4 +17,6 @@ public class DepositListDto {
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
   private Long refundAccountId; // null 가능
+
+  private String userName;
 }

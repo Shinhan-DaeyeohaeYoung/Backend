@@ -36,4 +36,6 @@ public interface UserOrgMembershipRepository extends JpaRepository<UserOrgMember
   List<UserOrgMembership> findAllWithOrganizationByUserIdAndType(Long userId, OrganizationType type);
 
   boolean existsByUserIdAndOrganizationIdAndRole(Long userId, Long orgId, UserOrgRole userOrgRole);
+
+  boolean existsByUser_IdAndOrganization_IdAndRole(Long userId, Long organizationId, UserOrgRole role);
 }
