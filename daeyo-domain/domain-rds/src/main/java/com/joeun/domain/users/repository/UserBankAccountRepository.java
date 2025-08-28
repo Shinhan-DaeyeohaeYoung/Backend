@@ -19,5 +19,6 @@ public interface UserBankAccountRepository extends JpaRepository<UserBankAccount
   int clearPrimaryForUser(@Param("userId") Long userId);
 
   List<UserBankAccount> findAllByUser_IdOrderByIsPrimaryDescCreatedAtDesc(Long userId);
-
+  Optional<UserBankAccount> findFirstByUserIdAndIsPrimaryTrue(Long userId);
+  Optional<UserBankAccount> findByIdAndUser_Id(Long id, Long userId);
 }

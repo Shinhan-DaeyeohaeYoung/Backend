@@ -19,4 +19,6 @@ public class DepositCreateResponse {
   private Long refundAccountId;     // nullable
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
+
+  private Long orgBankAccountId;
 }

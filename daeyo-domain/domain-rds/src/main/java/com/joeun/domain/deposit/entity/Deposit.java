@@ -1,6 +1,7 @@
 package com.joeun.domain.deposit.entity;
 
 import com.joeun.domain.deposit.types.DepositStatus;
+import com.joeun.domain.organization.entity.OrgBankAccount;
 import com.joeun.domain.organization.entity.Organization;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.university.entity.University;
@@ -77,8 +78,8 @@ public class Deposit {
   @ToString.Exclude @EqualsAndHashCode.Exclude
   private UserBankAccount refundAccount;
 
-  /* ===== 연관: Rental 쪽에서 deposit_id(FK)를 가짐 ===== */
-//  @OneToMany(mappedBy = "deposit", fetch = FetchType.LAZY)
-//  @ToString.Exclude @EqualsAndHashCode.Exclude
-//  private List<Rental> rentals = new ArrayList<>();
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "org_bank_account_id",
+      foreignKey = @ForeignKey(name = "fk_deposit_org_bank_account"))
+  private OrgBankAccount orgBankAccount;
 }

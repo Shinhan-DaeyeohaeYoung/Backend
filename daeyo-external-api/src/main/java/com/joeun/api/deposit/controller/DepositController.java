@@ -7,6 +7,7 @@ import com.joeun.api.deposit.dto.DepositForfeitResponse;
 import com.joeun.api.deposit.dto.DepositListDto;
 import com.joeun.api.deposit.dto.DepositRefundResponse;
 import com.joeun.api.deposit.dto.DepositResponse;
+import com.joeun.api.deposit.dto.OrgDepositResponse;
 import com.joeun.api.deposit.service.DepositService;
 import com.joeun.domain.deposit.types.DepositStatus;
 import com.joeun.global.config.LoginUser;
@@ -50,16 +51,13 @@ public class DepositController {
   @GetMapping
   public ResponseEntity<List<DepositResponse>> getMyDeposits(
       @AuthenticationPrincipal(expression = "id") Long userId,
-      @RequestParam(required = false) String status,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size
+      @RequestParam(required = false) String status // "예치/환불/몰수" or "CREATED/REFUNDED/FORFEITED"
   ) {
-    var result = depositService.searchMyDepositsSimple(userId, status, page, size);
-    return ResponseEntity.ok()
-        .header("X-Total-Count", String.valueOf(result.totalElements()))
-        .body(result.content());
+    List<DepositResponse> history = depositService.listMyDepositHistory(userId, status);
+    return ResponseEntity.ok(history); // 페이징 제거
   }
 
+/*
   @GetMapping("/organizations/{orgId}")
   public ResponseEntity<List<DepositListDto>> listOrgDeposits(
       @PathVariable("orgId") @NotNull Long orgId,
@@ -70,6 +68,17 @@ public class DepositController {
     Set<DepositStatus> statuses = parseStatuses(statusCsv);
     List<DepositListDto> result = depositService.listOrganizationDeposits(loginUser, orgId, statuses);
     return ResponseEntity.ok(result);
+  }
+*/
+
+  @GetMapping("/organizations/{orgId}")
+  public ResponseEntity<List<OrgDepositResponse>> listOrgDeposits(
+      @PathVariable("orgId") @NotNull Long orgId,
+      @AuthenticationPrincipal LoginUser loginUser,
+      @RequestParam(name = "status", required = false) String status // 예: 예치/환불/몰수 또는 CREATED/REFUNDED/FORFEITED
+  ) {
+    var rows = depositService.listOrganizationDepositHistory(loginUser, orgId, status);
+    return ResponseEntity.ok(rows);
   }
 
   private Set<DepositStatus> parseStatuses(String csv) {

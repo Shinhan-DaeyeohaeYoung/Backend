@@ -15,7 +15,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface DepositRepository extends JpaRepository<Deposit, Long> {
 
-  Page<Deposit> findByUserIdAndStatus(Long userId, DepositStatus status, Pageable pageable);
+  // Page<Deposit> findByUserIdAndStatus(Long userId, DepositStatus status, Pageable pageable);
 
   @Query("""
      select d

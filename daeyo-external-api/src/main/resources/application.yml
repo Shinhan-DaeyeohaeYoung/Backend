@@ -36,7 +36,6 @@ openai:
   base-url: "${OPENAI_BASE_URL:https://api.openai.com}"
 
 
-
 file:
   storage: mock
   s3:
@@ -47,4 +46,3 @@ file:
 logging:
   level:
     org.springframework.security: DEBUG
-    org.springframework.security.oauth2: DEBUG
