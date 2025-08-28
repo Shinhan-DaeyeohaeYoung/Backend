@@ -73,4 +73,10 @@ public class UnitPhoto {
         this.hash = hash;
         this.takenAt = takenAt;
     }
+    public void replacePhoto(String newKey, String newMime, String newHash) {
+        this.imageKey = newKey;
+        if (newMime != null && !newMime.isBlank()) this.mime = newMime;
+        if (newHash != null && !newHash.isBlank()) this.hash = newHash;
+    }
+
 }
