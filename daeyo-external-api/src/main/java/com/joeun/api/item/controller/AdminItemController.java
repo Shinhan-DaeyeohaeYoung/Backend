@@ -134,6 +134,7 @@ public class AdminItemController {
     public ItemDtos.ItemDetailResponse adminDetail(@PathVariable Long itemId,
                                                    @Parameter(hidden = true)
                                                    @AuthenticationPrincipal LoginUser loginUser,
+                                                   @Parameter(hidden = true)
                                                    @PageableDefault(size = 50, sort = "id") Pageable pageable) {
         return app.getItemDetailForAdmin(itemId, pageable, true, true,loginUser);
     }
