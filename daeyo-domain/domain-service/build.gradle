@@ -5,9 +5,6 @@ plugins {
 group = 'com.joeun'
 version = '0.0.1-SNAPSHOT'
 
-bootJar {enabled = false}
-jar {enabled = true}
-
 repositories {
     mavenCentral()
 }
@@ -15,12 +12,6 @@ repositories {
 dependencies {
     api project(':daeyo-domain:domain-rds')
     api project(':daeyo-domain:domain-redis')
-
-    // Spring Data JPA
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-    // Password Encoder
-    implementation 'org.springframework.security:spring-security-crypto'
 
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
