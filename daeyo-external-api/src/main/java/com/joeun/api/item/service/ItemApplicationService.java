@@ -28,6 +28,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+
 @Service
 @RequiredArgsConstructor
 public class ItemApplicationService {
@@ -208,13 +211,22 @@ public class ItemApplicationService {
 
     /* ===== 사진 (관리자 전용으로 쓰면 adminOnly 강제) ===== */
 
-    public Long upsertUnitPhoto(Long itemId, String assetNo, UnitPhotoDtos.UpsertRequest req, LoginUser loginUser) {
-        var item = loadItemAccessible(loginUser, itemId, true); // 관리자만
-        Long u = item.getUniversityId(), o = item.getOrganizationId();
-        LocalDateTime takenAt = (req.takenAt() == null ? LocalDateTime.now() : LocalDateTime.parse(req.takenAt()));
-        return unitPhotoDomainService.upsertUnitPhotoByAssetNo(u, o, itemId, assetNo,
-                req.key(), req.mime(), req.hash(), takenAt);
-    }
+//    public Long upsertUnitPhoto(Long itemId, String assetNo, UnitPhotoDtos.UpsertRequest req, LoginUser loginUser) {
+//        var item = itemRepository.findById(itemId)
+//                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "item not found: " + itemId));
+//
+//        Long u = item.getUniversityId();
+//        Long o = item.getOrganizationId();
+//
+//        LocalDateTime takenAt = (req.takenAt() == null)
+//                ? LocalDateTime.now()
+//                : LocalDateTime.parse(req.takenAt()); // 필요하면 커스텀 파서 적용
+//
+//        return unitPhotoDomainService.upsertUnitPhotoByAssetNo(
+//                u, o, itemId, assetNo,
+//                req.key(), req.mime(), req.hash(), takenAt
+//        );
+//    }
 
     public void deleteUnitPhoto(Long itemId, String assetNo, LoginUser loginUser) {
         var item = loadItemAccessible(loginUser, itemId, true); // 관리자만
@@ -225,34 +237,13 @@ public class ItemApplicationService {
 
     /* ===== 관리자: 생성/수정/유닛등록 (관리자 멤버십만 허용) ===== */
 
-    public Long createItem(AdminItemRegisterDtos.ItemCreateRequest req, LoginUser loginUser) {
-        // orgId 우선순위: 요청값 → (내 관리자 멤버십이 1개면 그거) → 모호/없음이면 에러
-        var adminOrgMap = organizationService.getMyOrganizations(loginUser, "")
-                .stream()
-                .filter(m -> isAdminRole(m.getRole()))
-                .collect(Collectors.toMap(
-                        MyOrganizationResponse::getOrganizationId, m -> m,
-                        (a, b) -> a, LinkedHashMap::new
-                ));
-
-        Long o = (req.organizationId() != null)
-                ? req.organizationId()
-                : (adminOrgMap.size() == 1 ? adminOrgMap.keySet().iterator().next() : null);
-
-        if (o == null) {
+    public Long createItem(AdminItemRegisterDtos.ItemCreateRequest req, LoginUser loginUser /* <- 안 써도 됨 */) {
+        if (req.organizationId() == null) {
             throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.BAD_REQUEST,
-                    "organizationId is required (multiple or no admin memberships)"
-            );
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "organizationId is required");
         }
-        var m = adminOrgMap.get(o);
-        if (m == null) {
-            throw new org.springframework.web.server.ResponseStatusException(
-                    org.springframework.http.HttpStatus.FORBIDDEN, "organization admin only"
-            );
-        }
-
-        Long u = (req.universityId() != null) ? req.universityId() : m.getUniversityId();
+        Long o = req.organizationId();
+        Long u = req.universityId();
 
         return itemDomainService.createItem(
                 u, o, req.name(), req.description(), req.deposit(), req.maxRentalDays(), req.isActive()
@@ -306,10 +297,7 @@ public class ItemApplicationService {
         }
         var m = organizationService.getMyOrganization(loginUser, organizationId);
         // 권한 체크 (관리자만)
-        var role = m.getRole();
-        if (role == null || !(role.equals("ORG_ADMIN") || role.equals("ADMIN"))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 조직의 관리자만 삭제할 수 있습니다.");
-        }
+
 
         Long u = m.getUniversityId();
         Long o = m.getOrganizationId();
@@ -323,10 +311,6 @@ public class ItemApplicationService {
         }
 
         var m = organizationService.getMyOrganization(loginUser, organizationId);
-        var role = m.getRole();
-        if (role == null || !(role.equals("ORG_ADMIN") || role.equals("ADMIN"))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "해당 조직의 관리자만 유닛을 삭제할 수 있습니다.");
-        }
 
         Long u = m.getUniversityId();
         Long o = m.getOrganizationId();

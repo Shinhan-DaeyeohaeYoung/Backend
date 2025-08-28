@@ -36,26 +36,26 @@ public class AdminItemController {
     private final ItemApplicationService app;
     private final AdminItemOrchestrator orchestrator;
 
-    /** 유닛 사진 업서트(등록/교체) */
-    @Operation(
-            summary = "유닛 사진 업서트(등록/교체)",
-            description = "특정 아이템의 개별 유닛(assetNo)에 대해 사진 메타(키/해시/촬영시각 등)를 등록하거나 교체합니다."
-    )
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "업서트 성공",
-                    content = @Content(mediaType = "application/json",
-                            examples = @ExampleObject(value = "{\"id\":123,\"replaced\":true}"))),
-            @ApiResponse(responseCode = "404", description = "아이템/유닛/테넌트 불일치")
-    })
-    @PageableAsQueryParam
-    @PostMapping("/{itemId}/units/{assetNo}/photo")
-    public Map<String, Object> upsertUnitPhoto(@PathVariable Long itemId,
-                                               @AuthenticationPrincipal LoginUser loginUser,
-                                               @PathVariable String assetNo,
-                                               @RequestBody UnitPhotoDtos.UpsertRequest req) {
-        Long photoId = app.upsertUnitPhoto(itemId, assetNo, req,loginUser);
-        return Map.of("id", photoId, "replaced", true);
-    }
+//    /** 유닛 사진 업서트(등록/교체) */
+//    @Operation(
+//            summary = "유닛 사진 업서트(등록/교체)",
+//            description = "특정 아이템의 개별 유닛(assetNo)에 대해 사진 메타(키/해시/촬영시각 등)를 등록하거나 교체합니다."
+//    )
+//    @ApiResponses({
+//            @ApiResponse(responseCode = "200", description = "업서트 성공",
+//                    content = @Content(mediaType = "application/json",
+//                            examples = @ExampleObject(value = "{\"id\":123,\"replaced\":true}"))),
+//            @ApiResponse(responseCode = "404", description = "아이템/유닛/테넌트 불일치")
+//    })
+//    @PageableAsQueryParam
+//    @PostMapping("/{itemId}/units/{assetNo}/photo")
+//    public Map<String, Object> upsertUnitPhoto(@PathVariable Long itemId,
+//                                               @AuthenticationPrincipal LoginUser loginUser,
+//                                               @PathVariable String assetNo,
+//                                               @RequestBody UnitPhotoDtos.UpsertRequest req) {
+//        Long photoId = app.upsertUnitPhoto(itemId, assetNo, req,loginUser);
+//        return Map.of("id", photoId, "replaced", true);
+//    }
 
     /** 관리자 리스트 */
     @Operation(

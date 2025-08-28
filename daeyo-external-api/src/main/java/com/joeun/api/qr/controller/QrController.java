@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.converters.models.PageableAsQueryParam;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -64,6 +65,7 @@ public class QrController {
                     content = @Content(mediaType = "image/png",
                             schema = @Schema(type = "string", format = "binary")))
     })
+    @PageableAsQueryParam
     @GetMapping(value = "/admin/org-qr.png", produces = MediaType.IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> orgQrPng(
             @RequestParam Long universityId,
@@ -90,6 +92,7 @@ public class QrController {
 
     // QrController.java
     @Operation(summary = "조직 QR 메타(JSON) 발급")
+    @PageableAsQueryParam
     @GetMapping("/admin/org-qr/meta")
     public Map<String, Object> orgQrMeta(
             @RequestParam Long universityId,
@@ -139,6 +142,7 @@ public class QrController {
             @ApiResponse(responseCode = "400", description = "토큰 누락/형식 오류"),
             @ApiResponse(responseCode = "401", description = "만료/위조 등으로 검증 실패")
     })
+    @PageableAsQueryParam
     @PostMapping("/qrs/resolve")
     public Map<String, Object> resolve(@io.swagger.v3.oas.annotations.parameters.RequestBody(
                                                    required = true,
