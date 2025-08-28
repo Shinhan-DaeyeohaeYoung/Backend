@@ -12,6 +12,7 @@ import com.joeun.domain.item.service.ItemDomainService;
 import com.joeun.domain.item.service.UnitPhotoDomainService;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.global.config.LoginUser;
+import com.joeun.infra.aws.s3.service.ImageInfraService;
 import com.joeun.service.organization.OrganizationDomainService;
 import com.joeun.service.rental.RentalDomainService;
 import com.joeun.service.waitlist.WaitlistDomainService;
@@ -40,6 +41,7 @@ public class ItemApplicationService {
     private final RentalDomainService rentalDomainService;
     private final OrganizationService organizationService;
     private final WaitlistDomainService waitlistDomainService;
+    private final ImageInfraService imageInfraService;
 
     /* ===== 공통 헬퍼 ===== */
 
@@ -106,6 +108,14 @@ public class ItemApplicationService {
                     var cover = unitPhotoDomainService
                             .findItemCover(i.getUniversityId(), i.getOrganizationId(), i.getId())
                             .orElse(null);
+
+                    String coverUrl = null;
+                    if (cover != null) {
+                        try {
+                            coverUrl = imageInfraService.getDownloadPresignedUrl(cover.getImageKey());
+                        } catch (Exception e) {
+                        }
+                    }
                     return new ItemDtos.ItemSummaryResponse(
                             i.getId(),
                             i.getUniversityId(),
@@ -116,7 +126,7 @@ public class ItemApplicationService {
                             i.getAvailableQuantity(),
                             waitlistDomainService.getWaitListCount(i.getId()),
                             i.getIsActive(),
-                            cover == null ? null : cover.getImageKey()
+                            coverUrl
                     );
                 });
     }
@@ -152,7 +162,12 @@ public class ItemApplicationService {
     public ItemDtos.ItemDetailResponse getItemDetailForUser(Long itemId, Pageable pageable,
                                                             boolean includeUnits, boolean includeRentalBrief,
                                                             LoginUser loginUser) {
-        return buildDetail(loadItemAccessible(loginUser, itemId, false), pageable, includeUnits, includeRentalBrief);
+        return buildDetail(
+                loadItemAccessible(loginUser, itemId, false),
+                pageable,
+                includeUnits,
+                includeRentalBrief
+        );
     }
 
     /** 관리자 상세: 관리자 멤버십(org)에서만 탐색 */
@@ -171,7 +186,11 @@ public class ItemApplicationService {
         var stats = itemDomainService.unitStats(u, o, itemId);
 
         var photos = unitPhotoDomainService.listItemUnitPhotos(u, o, itemId).stream()
-                .map(p -> new ItemDtos.UnitPhotoSummary(p.getUnit().getAssetNo(), p.getImageKey()))
+                .map(p -> {
+                    String key = p.getImageKey();
+                    String url = (key == null) ? null : imageInfraService.getDownloadPresignedUrl(key);
+                    return new ItemDtos.UnitPhotoSummary(p.getUnit().getAssetNo(), key, url);
+                })
                 .toList();
 
         ItemDtos.UnitPageResponse unitsDto = null;
@@ -286,8 +305,15 @@ public class ItemApplicationService {
         var p = unitPhotoDomainService.getUnitPhotoByAssetNo(
                 item.getUniversityId(), item.getOrganizationId(), itemId, assetNo
         );
+        String key = p.getImageKey();
+        String url = (key == null) ? null : imageInfraService.getDownloadPresignedUrl(key);
+
         return new UnitPhotoDtos.DetailResponse(
-                p.getId(), p.getImageKey(), p.getMime(), p.getHash(),
+                p.getId(),
+                key,
+                url,
+                p.getMime(),
+                p.getHash(),
                 p.getTakenAt() == null ? null : p.getTakenAt().toString()
         );
     }

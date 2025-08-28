@@ -17,6 +17,7 @@ public final class UnitPhotoDtos {
     public record DetailResponse(
             Long id,
             String key,
+            String imageUrl,
             String mime,
             String hash,
             String takenAt
