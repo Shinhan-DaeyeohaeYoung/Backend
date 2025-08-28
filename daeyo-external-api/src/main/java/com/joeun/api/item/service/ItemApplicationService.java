@@ -102,9 +102,15 @@ public class ItemApplicationService {
                             .findItemCover(i.getUniversityId(), i.getOrganizationId(), i.getId())
                             .orElse(null);
                     return new ItemDtos.ItemSummaryResponse(
-                            i.getId(), i.getUniversityId(), i.getOrganizationId(),
-                            i.getName(), i.getTotalQuantity(), i.getAvailableQuantity(), waitlistDomainService.getWaitListCount(i.getId()),
-                            i.getIsActive(), cover == null ? null : cover.getImageKey()
+                            i.getId(),
+                            i.getUniversityId(),
+                            i.getOrganizationId(),
+                            i.getName(),
+                            i.getDescription(),
+                            i.getTotalQuantity(),
+                            i.getAvailableQuantity(),
+                            i.getIsActive(),
+                            cover == null ? null : cover.getImageKey()
                     );
                 });
     }
@@ -120,9 +126,16 @@ public class ItemApplicationService {
                             .findItemCover(i.getUniversityId(), i.getOrganizationId(), i.getId())
                             .orElse(null);
                     return new ItemDtos.ItemSummaryResponse(
-                            i.getId(), i.getUniversityId(), i.getOrganizationId(),
-                            i.getName(), i.getTotalQuantity(), i.getAvailableQuantity(), waitlistDomainService.getWaitListCount(i.getId()),
-                            i.getIsActive(), cover == null ? null : cover.getImageKey()
+                            i.getId(),
+                            i.getUniversityId(),
+                            i.getOrganizationId(),
+                            i.getName(),
+                            i.getDescription(),
+                            i.getTotalQuantity(),
+                            i.getAvailableQuantity(),
+                            waitlistDomainService.getWaitListCount(i.getId()),
+                            i.getIsActive(),
+                            cover == null ? null : cover.getImageKey()
                     );
                 });
     }

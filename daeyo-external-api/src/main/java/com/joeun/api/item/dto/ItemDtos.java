@@ -8,6 +8,7 @@ public final class ItemDtos {
     public record ItemSummaryResponse(
             Long id, Long universityId, Long organizationId,
             String name,
+            String description,
             Integer totalQuantity, Integer availableQuantity, Integer countWaitList,
             Boolean isActive,
             String coverKey // null 가능
