@@ -14,7 +14,7 @@ public final class ItemDtos {
             String coverKey // null 가능
     ) {}
 
-    public record UnitPhotoSummary(String assetNo, String key) {}
+    public record UnitPhotoSummary(String assetNo, String key,String imageUrl) {}
 
     // 현재(활성) 대여 요약
     public record RentalBrief(Long rentalId, Long userId, LocalDateTime dueAt) {}
