@@ -46,4 +46,14 @@ public class WaitlistRdsService {
     public boolean existsActiveWait(Long itemId, Long id, List<WaitlistStatus> waiting) {
         return waitlistRepository.existsByItemIdAndUserIdAndStatusIn(itemId, id, waiting);
     }
+
+
+    public Boolean existsWaitListByItemIdAndUserIdAndStatus(Long itemId, Long userId, WaitlistStatus waitlistStatus) {
+        return waitlistRepository.existsByItemIdAndUserIdAndStatus(itemId, userId, waitlistStatus);
+    }
+
+    @Transactional
+    public void markCancelledById(Long id, LocalDateTime now) {
+        waitlistRepository.markCancelledById(id);
+    }
 }

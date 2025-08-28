@@ -95,4 +95,12 @@ public class WaitlistDomainService {
     public boolean existsActiveWait(Long itemId, Long id, List<WaitlistStatus> waiting) {
         return waitlistRdsService.existsActiveWait(itemId, id, waiting);
     }
+
+    public Boolean existsWaitListByItemIdAndUserIdAndStatus(Long itemId, Long userId, WaitlistStatus waitlistStatus) {
+        return waitlistRdsService.existsWaitListByItemIdAndUserIdAndStatus(itemId, userId, waitlistStatus);
+    }
+
+    public void markCancelledById(Long id, LocalDateTime now) {
+        waitlistRdsService.markCancelledById(id, now);
+    }
 }

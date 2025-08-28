@@ -11,6 +11,7 @@ public final class ItemDtos {
             String description,
             Integer totalQuantity, Integer availableQuantity, Integer countWaitList,
             Boolean isActive,
+            Boolean isBooked,
             String coverKey // null 가능
     ) {}
 

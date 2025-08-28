@@ -33,4 +33,11 @@ public class WaitlistController implements WaitlistApi {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/items/{itemId}/cancel")
+    public ResponseEntity<Void> cancelWaitlistByItemId(@PathVariable @Valid Long itemId,
+                                                       @AuthenticationPrincipal LoginUser loginUser) {
+        waitlistService.cancelWaitlistByItemId(itemId, loginUser);
+        return ResponseEntity.ok().build();
+    }
+
 }

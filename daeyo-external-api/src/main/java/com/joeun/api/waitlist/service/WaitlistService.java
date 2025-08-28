@@ -71,4 +71,16 @@ public class WaitlistService {
                 .totalCount(totalCount)
                 .build();
     }
+
+    public void cancelWaitlistByItemId(Long itemId, LoginUser loginUser) {
+        List<Waitlist> waitlists = waitlistDomainService
+                .getWaitlistsByItemIdAndStatus(itemId, WaitlistStatus.WAITING);
+
+        Waitlist myWaitlist = waitlists.stream()
+                .filter(w -> w.getUser().getId().equals(loginUser.id()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("대기열에 참여하고 있지 않습니다."));
+
+        waitlistDomainService.markCancelledById(myWaitlist.getId(), LocalDateTime.now());
+    }
 }
