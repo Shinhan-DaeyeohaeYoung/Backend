@@ -2,6 +2,7 @@ package com.joeun.domain.item.service;
 
 import com.joeun.domain.item.entity.*;
 import com.joeun.domain.item.repository.*;
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ public class ItemDomainService {
     }
 
     @Transactional
-    public Item createItem(Long u, Long o, String name, String desc, Long deposit, Integer maxDays, Boolean active) {
+    public Item createItem(Long u, Long o, String name, String desc, BigDecimal deposit, Integer maxDays, Boolean active) {
         Item item = Item.builder()
                 .universityId(u).organizationId(o)
                 .name(name).description(desc)
@@ -39,7 +40,7 @@ public class ItemDomainService {
     }
 
     @Transactional
-    public Item patchItem(Long u, Long o, Long itemId, String name, String desc, Long deposit, Integer maxDays, Boolean active) {
+    public Item patchItem(Long u, Long o, Long itemId, String name, String desc, BigDecimal deposit, Integer maxDays, Boolean active) {
         Item item = getByTenant(u, o, itemId);
         item.patch(name, desc, deposit, maxDays, active);
         return item;

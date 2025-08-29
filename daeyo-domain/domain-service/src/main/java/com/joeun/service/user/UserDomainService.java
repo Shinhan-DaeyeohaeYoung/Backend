@@ -5,10 +5,15 @@ import com.joeun.domain.university.entity.University;
 import com.joeun.domain.university.repository.UniversityPointRepository;
 import com.joeun.domain.university.repository.UniversityRepository;
 import com.joeun.domain.users.entity.User;
+import com.joeun.domain.users.entity.UserApiCredential;
 import com.joeun.domain.users.entity.UserBankAccount;
+import com.joeun.domain.users.repository.UserApiCredentialRepository;
 import com.joeun.domain.users.repository.UserBankAccountRepository;
 import com.joeun.domain.users.repository.UserRepository;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +27,7 @@ public class  UserDomainService {
   private final UniversityRepository univRepo;
   private final UniversityPointRepository univPointRepo;
   private final UserBankAccountRepository accountRepo;
+  private final UserApiCredentialRepository credRepo;
 
   public User createUser(User user){
     return userRepo.save(user);
@@ -107,5 +113,49 @@ public class  UserDomainService {
     univPointRepo.upsertAdd(univId, 100L);
   }
 
+  // USER CREDENTIAL
+  public void saveOrUpdateKey(Long userId, String apiKey) {
+    User user = userRepo.findById(userId)
+        .orElseThrow(() -> new IllegalArgumentException("user not found: " + userId));
+
+    UserApiCredential cred = credRepo.findByUser_Id(userId)
+        .orElseGet(() -> {
+          UserApiCredential c = new UserApiCredential();
+          c.setUser(user);
+          return c;
+        });
+
+    boolean changed = !Objects.equals(cred.getApiKey(), apiKey);
+    cred.setApiKey(apiKey);
+    if (changed) cred.setRotatedAt(LocalDateTime.now());
+
+    credRepo.save(cred);
+  }
+
+  @Transactional(readOnly = true)
+  public String getKeyOrThrow(Long userId) {
+    return credRepo.findByUser_Id(userId)
+        .map(UserApiCredential::getApiKey)
+        .orElseThrow(() -> new IllegalStateException("credential not found for user: " + userId));
+  }
+
+  @Transactional(readOnly = true)
+  public boolean hasKey(Long userId) {
+    return credRepo.existsByUser_Id(userId);
+  }
+
+  @Transactional(readOnly = true)
+  public String getUserKeyOrThrow(Long userId) {
+    // 여러 개 저장될 수 있다면 "가장 최신" 기준으로 조회
+    return credRepo.findTopByUser_IdOrderByIdDesc(userId)
+        .map(cred -> cred.getApiKey())
+        .orElseThrow(() -> new NoSuchElementException("userKey not found for userId=" + userId));
+  }
+
+  @Transactional(readOnly = true)
+  public Optional<UserBankAccount> findPrimaryBankAccount(Long userId) {
+    return accountRepo.findByUser_IdAndIsPrimaryTrue(userId);
+    // 필드명이 isPrimary면: return userBankAccountRepository.findByUser_IdAndIsPrimaryTrue(userId);
+  }
 
 }

@@ -1,5 +1,6 @@
 package com.joeun.api.user.controller;
 
+import com.joeun.api.user.dto.MyBalanceResponse;
 import com.joeun.api.user.dto.UserBankAccountCreateRequest;
 import com.joeun.api.user.dto.UserBankAccountCreateResponse;
 import com.joeun.api.user.dto.UserBankAccountResponse;
@@ -11,6 +12,7 @@ import com.joeun.api.user.service.UserService;
 import com.joeun.global.config.LoginUser;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -32,13 +34,13 @@ public class UserController {
 
   private final UserService userService;
 
-  @PostMapping("/signup")
+/*  @PostMapping("/signup")
   public ResponseEntity<?> signup(
           @Valid @RequestBody UserSignupRequest dto
   ){
     userService.createUser(dto);
     return ResponseEntity.ok().build();
-  }
+  }*/
 
   @PostMapping("/signin")
   public ResponseEntity<UserSigninResponse> signin(
@@ -91,4 +93,13 @@ public class UserController {
     var body = userService.addMyBankAccount(loginUser.id(), req);
     return ResponseEntity.status(HttpStatus.CREATED).body(body);
   }
+
+  @GetMapping("/me/balance")
+  public ResponseEntity<MyBalanceResponse> getMyBalance(
+      @AuthenticationPrincipal @NotNull LoginUser loginUser
+  ) {
+    var resp = userService.getMyBalance(loginUser);
+    return ResponseEntity.ok(resp);
+  }
+
 }

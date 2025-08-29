@@ -12,22 +12,37 @@ import com.joeun.api.deposit.dto.DepositRefundResponse;
 import com.joeun.api.deposit.dto.DepositResponse;
 import com.joeun.api.deposit.dto.OrgDepositResponse;
 import com.joeun.api.deposit.mapper.DepositMappers;
+import com.joeun.api.ssafyAPI.client.SsafyDemandDepositClient;
+import com.joeun.api.ssafyAPI.dto.AccountApiHeader;
+import com.joeun.api.ssafyAPI.dto.UpdateDemandDepositAccountTransferRequest;
+import com.joeun.api.ssafyAPI.dto.UpdateDemandDepositAccountTransferResponse;
 import com.joeun.domain.deposit.entity.Deposit;
 import com.joeun.domain.deposit.types.DepositEventType;
 import com.joeun.domain.deposit.types.DepositStatus;
 import com.joeun.domain.users.types.UserOrgRole;
 import com.joeun.global.config.LoginUser;
+import com.joeun.global.util.AccountCipher;
 import com.joeun.service.deposit.DepositDomainService;
 import com.joeun.service.deposit.DepositEventView;
 import com.joeun.service.deposit.OrgDepositEventView;
 import com.joeun.service.organization.OrganizationDomainService;
+import com.joeun.service.user.UserDomainService;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -41,8 +56,19 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class DepositService {
 
+  private final UserDomainService userDomainService;
   private final DepositDomainService depositDomainService;
   private final OrganizationDomainService orgDomainService;
+  private final AccountCipher accountCipher;
+
+  private final SsafyDemandDepositClient ssafyClient;
+  @Value("${ssafy.api-key}")
+  private String ssafyAdminApiKey;
+
+  private static final DateTimeFormatter D = DateTimeFormatter.ofPattern("yyyyMMdd");
+  private static final DateTimeFormatter T = DateTimeFormatter.ofPattern("HHmmss");
+  private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+  private static final Logger log = LoggerFactory.getLogger(DepositService.class);
 
   public List<DepositResponse> listMyDepositHistory(Long userId, String statusText) {
     final DepositEventType filter = parseStatus(statusText);
@@ -164,6 +190,132 @@ public class DepositService {
         .refundAccountId(d.getRefundAccount() == null ? null : d.getRefundAccount().getId())
         .build();
   }
+
+  public void transferUserToOrganization(Long id, Long o, BigDecimal amount, String memo) {
+    // 0) 금액 검증
+    if (amount == null || amount.signum() <= 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "amount must be positive");
+    }
+
+    // 1) 사용자 userKey
+    final String userKey;
+    try {
+      userKey = userDomainService.getUserKeyOrThrow(id);
+    } catch (NoSuchElementException e) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "userKey not found for userId=" + id);
+    }
+
+    // 2) 사용자 주계좌 복호화
+    var userPrimary = userDomainService.findPrimaryBankAccount(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "user primary bank account not found"));
+    byte[] enc = userPrimary.getAccountNo(); // byte[] (암호문)
+    if (enc == null || enc.length == 0) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "user encrypted account not found");
+    }
+    String withdrawalAccountNo = accountCipher.decrypt(enc); // 평문
+
+    // 3) 조직 주계좌(평문)
+    var orgAcc = orgDomainService.findPrimaryOrgBankAccountOrFirstOrThrow(o);
+    String depositAccountNo = orgAcc.getAccountNo();
+
+    // 4) SSAFY 헤더/요청 구성
+    String today = LocalDate.now().format(D);
+    String now   = LocalTime.now().format(T);
+    String idem  = LocalDateTime.now().format(TS) + ThreadLocalRandom.current().nextInt(100000, 999999);
+    String amountStr = amount.setScale(0, RoundingMode.DOWN).toPlainString(); // 원단위 정수 문자열
+
+    AccountApiHeader header = AccountApiHeader.builder()
+        .apiName("updateDemandDepositAccountTransfer")
+        .transmissionDate(today)
+        .transmissionTime(now)
+        .institutionCode("00100")
+        .fintechAppNo("001")
+        .apiServiceCode("updateDemandDepositAccountTransfer")
+        .institutionTransactionUniqueNo(idem)
+        .apiKey(ssafyAdminApiKey)
+        .userKey(userKey) // ✅ 출금 주체는 사용자
+        .build();
+
+    UpdateDemandDepositAccountTransferRequest req =
+        UpdateDemandDepositAccountTransferRequest.builder()
+            .header(header)
+            .depositAccountNo(depositAccountNo)
+            .depositTransactionSummary(
+                (memo != null && !memo.isBlank()) ? memo : "(수시입출금) : 입금(이체)")
+            .transactionBalance(amountStr)
+            .withdrawalAccountNo(withdrawalAccountNo)
+            .withdrawalTransactionSummary("(수시입출금) : 출금(이체)")
+            .build();
+
+    // 5) 호출
+    UpdateDemandDepositAccountTransferResponse res = ssafyClient.updateDemandDepositAccountTransfer(req);
+
+    // 6) 응답 검증
+    if (res == null || res.getHeader() == null || !"H0000".equals(res.getHeader().getResponseCode())) {
+      String msg = (res != null && res.getHeader() != null)
+          ? res.getHeader().getResponseMessage()
+          : "upstream error";
+      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "transfer failed: " + msg);
+    }
+
+    log.info("Deposit transfer success: idem={}, userId={}, orgId={}, amount={}",
+        header.getInstitutionTransactionUniqueNo(), id, o, amountStr);
+  }
+
+  /** 조직(orgId) → 사용자(userId) 환불 이체 */
+  public void transferOrganizationToUser(Long orgId, Long userId, BigDecimal amount, String memo) {
+    if (amount == null || amount.signum() <= 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "amount must be positive");
+    }
+
+    // 1) 조직 userKey + 출금계좌(평문)
+    String orgUserKey = orgDomainService.getOrgUserKeyOrThrow(orgId);
+    var orgAcc = orgDomainService.findPrimaryOrgBankAccountOrFirstOrThrow(orgId);
+    String withdrawalAccountNo = orgAcc.getAccountNo(); // 조직 출금
+
+    // 2) 사용자 입금계좌(복호화)
+    var userPrimary = userDomainService.findPrimaryBankAccount(userId)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "user primary bank account not found"));
+    byte[] enc = userPrimary.getAccountNo();
+    if (enc == null || enc.length == 0) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "user encrypted account not found");
+    }
+    String depositAccountNo = accountCipher.decrypt(enc); // 사용자 입금
+
+    // 3) 헤더/요청
+    String today = LocalDate.now().format(D);
+    String now   = LocalTime.now().format(T);
+    String idem  = LocalDateTime.now().format(TS) + ThreadLocalRandom.current().nextInt(100000, 999999);
+    String amountStr = amount.setScale(0, RoundingMode.DOWN).toPlainString();
+
+    AccountApiHeader header = AccountApiHeader.builder()
+        .apiName("updateDemandDepositAccountTransfer")
+        .transmissionDate(today)
+        .transmissionTime(now)
+        .institutionCode("00100")
+        .fintechAppNo("001")
+        .apiServiceCode("updateDemandDepositAccountTransfer")
+        .institutionTransactionUniqueNo(idem)
+        .apiKey(ssafyAdminApiKey)
+        .userKey(orgUserKey) // ✅ 출금 주체는 "조직"
+        .build();
+
+    UpdateDemandDepositAccountTransferRequest req = UpdateDemandDepositAccountTransferRequest.builder()
+        .header(header)
+        .depositAccountNo(depositAccountNo) // 사용자 입금
+        .depositTransactionSummary((memo != null && !memo.isBlank()) ? memo : "(수시입출금) : 입금(이체)")
+        .transactionBalance(amountStr)
+        .withdrawalAccountNo(withdrawalAccountNo) // 조직 출금
+        .withdrawalTransactionSummary("(수시입출금) : 출금(이체)")
+        .build();
+
+    var res = ssafyClient.updateDemandDepositAccountTransfer(req);
+    if (res == null || res.getHeader() == null || !"H0000".equals(res.getHeader().getResponseCode())) {
+      String msg = (res != null && res.getHeader() != null) ? res.getHeader().getResponseMessage() : "upstream error";
+      throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "refund transfer failed: " + msg);
+    }
+  }
+
 /*
 
   public DepositRefundResponse refundFull(Long depositId, Long userId) {

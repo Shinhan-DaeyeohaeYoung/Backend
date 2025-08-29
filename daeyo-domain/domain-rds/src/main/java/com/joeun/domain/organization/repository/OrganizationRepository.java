@@ -13,13 +13,15 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
         select distinct m.organization.id
         from UserOrgMembership m
         where m.user.id = :userId
-        /* 필요하면 활성 조건 추가
-           and m.active = true
-           and m.organization.active = true
-        */
     """)
     List<Long> findOrgIdsByUserId(@Param("userId") Long userId);
 
+  default Organization findByIdOrThrow(Long id) {
+    return findById(id).orElseThrow(
+        () -> new jakarta.persistence.EntityNotFoundException("organization not found: " + id)
+    );
+  }
+           
     @Query("""
     select o.id
         from Organization o

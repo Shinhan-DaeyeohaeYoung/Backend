@@ -13,6 +13,7 @@ import com.joeun.domain.reservation.vo.ReserveResult;
 import com.joeun.global.dto.NotificationRequest;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
+import java.math.BigDecimal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Pageable;
@@ -428,6 +429,22 @@ public class RentalDomainService {
     @Transactional(readOnly = true)
     public List<Rental> listMyActiveReservationsByOrganizationRaw(Long u, Long organizationId, Long userId) {
         return rentalRepository.findMyReservedActiveByOrg(u, userId, organizationId);
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal precheckAndGetDepositAmount(Long u, Long o, Long rentalId, Long actorUserId) {
+        Rental r = rentalRepository.findByIdAndTenant(u, o, rentalId)
+            .orElseThrow(() -> new NoSuchElementException("rental not found"));
+
+        if (!r.getUserId().equals(actorUserId)) throw new IllegalStateException("not owner");
+        if (r.getStatus() != RentalStatus.RESERVED) throw new IllegalStateException("not RESERVED");
+        if (r.isReservationExpired(LocalDateTime.now(Z))) throw new IllegalStateException("reservation expired");
+
+        BigDecimal depositAmount = Optional.ofNullable(
+            r.getItem() != null ? r.getItem().getDeposit() : null
+        ).orElseThrow(() -> new IllegalStateException("deposit amount missing"));
+
+        return depositAmount;
     }
 
 }

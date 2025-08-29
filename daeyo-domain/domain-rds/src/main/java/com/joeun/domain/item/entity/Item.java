@@ -1,6 +1,7 @@
 package com.joeun.domain.item.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,7 +33,7 @@ public class Item {
     @Column(nullable = false, length = 160) private String name;
     @Lob private String description;
 
-    private Long deposit;
+    private BigDecimal deposit;
     private Integer maxRentalDays;
     private Integer totalQuantity;
     private Integer availableQuantity;
@@ -78,7 +79,7 @@ public class Item {
     }
 
     /** 일부 필드만 PATCH 반영 (null 무시) */
-    public Item patch(String name, String description, Long deposit,
+    public Item patch(String name, String description, BigDecimal deposit,
                       Integer maxRentalDays, Boolean isActive) {
         if (name != null) this.name = name;
         if (description != null) this.description = description;

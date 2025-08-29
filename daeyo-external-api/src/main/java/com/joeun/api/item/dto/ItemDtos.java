@@ -1,4 +1,5 @@
 package com.joeun.api.item.dto;// com.joeun.api.item.dto.ItemDtos
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -33,13 +34,13 @@ public final class ItemDtos {
 
     // ★ 관리자/사용자 공용 상세
     public record ItemDetailResponse(
-            Long id, Long universityId, Long organizationId,
-            String name, String description,
-            Long deposit, Integer maxRentalDays,
-            Integer totalQuantity, Integer availableQuantity, Integer countWaitList,
-            Boolean isActive,
-            Map<String, Long> unitStats,
-            List<UnitPhotoSummary> photos,
-            UnitPageResponse units // 필요 없으면 null
+        Long id, Long universityId, Long organizationId,
+        String name, String description,
+        BigDecimal deposit, Integer maxRentalDays,
+        Integer totalQuantity, Integer availableQuantity, Integer countWaitList,
+        Boolean isActive,
+        Map<String, Long> unitStats,
+        List<UnitPhotoSummary> photos,
+        UnitPageResponse units // 필요 없으면 null
     ) {}
 }

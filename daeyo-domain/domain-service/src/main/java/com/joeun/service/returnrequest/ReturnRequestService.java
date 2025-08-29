@@ -15,6 +15,7 @@ import com.joeun.service.rental.RentalDomainService;
 import com.joeun.service.waitlist.WaitlistDomainService;
 import jakarta.persistence.EntityNotFoundException;
 
+import java.math.BigDecimal;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -226,5 +227,24 @@ public class ReturnRequestService {
                 .or(() -> unitPhotoRepository.findByUnit_Id(unitId))
                 .map(UnitPhoto::getImageKey)
                 .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal getRefundAmountOrThrow(Long u, Long o, Long returnRequestId) {
+        ReturnRequest rr = returnRequestRepository.findByIdAndUniversityIdAndOrganizationId(u, o, returnRequestId)
+            .orElseThrow(() -> new NoSuchElementException("return request not found"));
+        var rental = rr.getRental();
+        BigDecimal amt = (rental != null && rental.getItem() != null)
+            ? rental.getItem().getDeposit()
+            : null;
+        if (amt == null) throw new IllegalStateException("deposit amount missing");
+        return amt;
+    }
+
+    @Transactional(readOnly = true)
+    public Long getReturnRequestUserId(Long u, Long o, Long returnRequestId) {
+        ReturnRequest rr = returnRequestRepository.findByIdAndUniversityIdAndOrganizationId(u, o, returnRequestId)
+            .orElseThrow(() -> new NoSuchElementException("return request not found"));
+        return rr.getUserId();
     }
 }

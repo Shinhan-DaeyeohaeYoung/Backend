@@ -1,22 +1,23 @@
 package com.joeun.api.item.dto;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public final class AdminItemRegisterDtos {
     public record RegisterRequest(
-            Long universityId, Long organizationId,
-            String name, String description, Long deposit, Integer maxRentalDays,
-            List<UnitCreate> units
+        Long universityId, Long organizationId,
+        String name, String description, BigDecimal deposit, Integer maxRentalDays,
+        List<UnitCreate> units
     ) {}
 
     public record ItemCreateRequest(
             Long universityId, Long organizationId,
-            String name, String description, Long deposit, Integer maxRentalDays,
+            String name, String description, BigDecimal deposit, Integer maxRentalDays,
             Boolean isActive
     ) {}
 
     public record ItemPatchRequest(
-            String name, String description, Long deposit, Integer maxRentalDays,
+            String name, String description, BigDecimal deposit, Integer maxRentalDays,
             Boolean isActive
     ) {}
 

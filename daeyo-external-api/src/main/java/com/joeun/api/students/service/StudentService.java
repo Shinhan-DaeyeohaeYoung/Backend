@@ -1,5 +1,12 @@
 package com.joeun.api.students.service;
 
+import com.joeun.api.ssafyAPI.client.SsafyDemandDepositClient;
+import com.joeun.api.ssafyAPI.client.SsafyMemberClient;
+import com.joeun.api.ssafyAPI.dto.AccountApiHeader;
+import com.joeun.api.ssafyAPI.dto.CreateDemandDepositAccountRequest;
+import com.joeun.api.ssafyAPI.dto.MemberCreateRequest;
+import com.joeun.api.ssafyAPI.dto.MemberCreateResponse;
+import com.joeun.api.ssafyAPI.dto.UpdateDemandDepositAccountDepositRequest;
 import com.joeun.api.students.dto.StudentCreateRequest;
 import com.joeun.api.students.dto.StudentResponse;
 import com.joeun.api.students.dto.StudentSignupRequest;
@@ -15,8 +22,15 @@ import com.joeun.global.util.AccountCipher;
 import com.joeun.service.students.AffiliationDomainService;
 import com.joeun.service.students.StudentDomainService;
 import com.joeun.service.user.UserDomainService;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -24,6 +38,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class StudentService {
 
@@ -32,6 +47,16 @@ public class StudentService {
   private final StudentDomainService studentDomainService;
   private final PasswordEncoder passwordEncoder;
   private final AffiliationDomainService affiliationDomainService;
+
+  private final SsafyMemberClient ssafyMemberClient;
+  private final SsafyDemandDepositClient ssafyDemandDepositClient;
+  private final UserDomainService userCredentialDomainService;
+
+  @Value("${ssafy.api-key}")
+  private String ssafyMemberAdminApiKey;
+
+  @Value("${ssafy.account-type}")
+  private String ssafyAccountTypeUniqueNo;
 
   public StudentResponse create(StudentCreateRequest req) {
     // 중복 확인
@@ -104,6 +129,8 @@ public class StudentService {
     List<StudentOrgAffiliation> affs = affiliationDomainService.findAllByStudentId(s.getId());
     List<UserOrgMembership> memberships = affiliationDomainService.migrateToUserMemberships(u, affs);
 
+/* 기존에 계좌번호를 입력받던 부분을 없애고, API 응답 값으로 대체
+
     String digitsOnly = req.accountNo().replaceAll("\\D", "");
     if (digitsOnly.length() < 6 || digitsOnly.length() > 30) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid account number length");
@@ -122,7 +149,122 @@ public class StudentService {
         masked,
         encrypted,
         primaryFlag
-    );
+    );*/
+
+    // API
+    // SSAFY 회원 생성 호출
+    String email = u.getEmail();
+    MemberCreateRequest mReq = new MemberCreateRequest(ssafyMemberAdminApiKey, email);
+    MemberCreateResponse mRes = ssafyMemberClient.createMember(mReq);
+
+    // userKey 저장
+    userCredentialDomainService.saveOrUpdateKey(u.getId(), mRes.getUserKey());
+    StudentSignupResponse.BankAccountDto bankDto = null;
+    // SSAFY 계좌 개설 호출 (userKey 필요)
+    try {
+      // 제품코드는 설정값을 권장 (ex. application.yml: ssafy.accountTypeUniqueNo)
+      String productNo = ssafyAccountTypeUniqueNo; // @Value 주입 또는 설정 빈
+      var accRes = ssafyDemandDepositClient.createDemandDepositAccount(
+          CreateDemandDepositAccountRequest.builder()
+              .header(AccountApiHeader.builder()
+                  .apiName("createDemandDepositAccount")
+                  .transmissionDate(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")))
+                  .transmissionTime(LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss")))
+                  .institutionCode("00100")
+                  .fintechAppNo("001")
+                  .apiServiceCode("createDemandDepositAccount")
+                  .institutionTransactionUniqueNo(
+                      LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                          + ThreadLocalRandom.current().nextInt(100000, 999999))
+                  .apiKey(ssafyMemberAdminApiKey)
+                  .userKey(mRes.getUserKey()) // ✅ 필수
+                  .build())
+              .accountTypeUniqueNo(productNo)
+              .build()
+      );
+
+      // 응답에서 계좌번호/은행코드 추출
+            String extAccountNo = accRes.getRec().getAccountNo();
+            String extBankCode  = accRes.getRec().getBankCode();
+
+            if (extAccountNo == null || extAccountNo.isBlank()) {
+                throw new IllegalStateException("accountNo missing from SSAFY API response");
+              }
+
+            // 저장용 마스킹/암호화
+            String maskedFromApi = accountCipher.mask(extAccountNo);
+            byte[] encryptedFromApi = accountCipher.encrypt(extAccountNo);
+
+            // 은행명 해석 (유틸/서비스 추가해서 코드→이름 매핑, 없으면 null 허용)
+            String bankNameResolved = "신한은행";
+
+            // 예금주명: 사용자 실명 사용(요구사항에 따라 u.getName() 또는 s.getName())
+            String holderName = u.getName();
+
+            // ✅ DB 저장: 첫 계좌이므로 무조건 primary = true
+            Boolean primaryFlag2 = Boolean.TRUE;
+            userDomainService.addBankAccountPrepared(
+                u,
+                extBankCode,        // API 응답 은행코드
+                bankNameResolved,   // 코드→이름 매핑 결과(없으면 null)
+                holderName,         // 예금주명
+                maskedFromApi,
+                encryptedFromApi,
+                primaryFlag2        // ← 무조건 true
+            );
+
+          bankDto = new StudentSignupResponse.BankAccountDto(
+                  maskedFromApi,
+                  extBankCode,
+                  bankNameResolved,
+                  true,   // 항상 primary
+                  false   // 최초 isVerified=false
+          );
+
+      try {
+        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String now   = LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
+        String idem  = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+            + ThreadLocalRandom.current().nextInt(100000, 999999);
+
+        var depositHeader = AccountApiHeader.builder()
+            .apiName("updateDemandDepositAccountDeposit")
+            .transmissionDate(today)
+            .transmissionTime(now)
+            .institutionCode("00100")
+            .fintechAppNo("001")
+            .apiServiceCode("updateDemandDepositAccountDeposit")
+            .institutionTransactionUniqueNo(idem)
+            .apiKey(ssafyMemberAdminApiKey)   // ← 관리자 키
+            .userKey(mRes.getUserKey())       // ← 방금 받은 사용자 userKey
+            .build();
+
+        var depositReq = UpdateDemandDepositAccountDepositRequest.builder()
+            .header(depositHeader)
+            .accountNo(extAccountNo)           // 방금 개설한 사용자 계좌
+            .transactionBalance("100000")      // ← 100,000원
+            .transactionSummary("(수시입출금) : 입금")
+            .build();
+
+        var depositRes = ssafyDemandDepositClient.updateDemandDepositAccountDeposit(depositReq);
+        if (depositRes == null || depositRes.getHeader() == null
+            || !"H0000".equals(depositRes.getHeader().getResponseCode())) {
+          String msg = (depositRes != null && depositRes.getHeader() != null)
+              ? depositRes.getHeader().getResponseMessage() : "upstream error";
+          log.warn("Initial deposit failed for userId={}, reason={}", u.getId(), msg);
+        } else {
+          log.info("Initial deposit success: userId={}, amount=100000, idem={}",
+              u.getId(), depositRes.getHeader().getInstitutionTransactionUniqueNo());
+        }
+      } catch (Exception ex) {
+        log.warn("Initial deposit error for userId={}", u.getId(), ex);
+      }
+
+    } catch (Exception e) {
+      // 계좌 개설 실패해도 회원가입은 진행 (운영정책에 맞게 경고/재시도 큐잉)
+      log.warn("SSAFY account open failed for userId={}", u.getId(), e);
+    }
+    // API 끝
 
     // 7) 학생 상태 변경
     studentDomainService.markRegistered(s);
@@ -134,11 +276,6 @@ public class StudentService {
     var memDtos = memberships.stream()
         .map(m -> new UserMembershipDto(m.getOrganization().getId(), m.getRole().name()))
         .toList();
-
-    // 필요 시 응답에 계좌 요약 포함(마스킹만)
-    var bankDto = new StudentSignupResponse.BankAccountDto(
-        masked, req.bankCode(), req.bankName(), true, false  // 첫 계좌면 primary=true, 최초 isVerified=false
-    );
 
     return new StudentSignupResponse(userDto, memDtos, bankDto);
   }
