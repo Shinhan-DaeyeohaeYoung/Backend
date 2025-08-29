@@ -5,6 +5,8 @@ import com.joeun.domain.notification.service.NotiUserRdsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class NotiUserDomainService {
@@ -19,7 +21,7 @@ public class NotiUserDomainService {
         return notiUserRdsService.findNotiUserById(id);
     }
 
-    public NotiUser findNotiUserByUserId(Long userId) {
+    public List<NotiUser> findNotiUserByUserId(Long userId) {
         return notiUserRdsService.findNotiUserByUserId(userId);
     }
 
