@@ -90,7 +90,7 @@ public class DepositController {
         .collect(Collectors.toCollection(() -> EnumSet.noneOf(DepositStatus.class)));
   }
 
-  @PostMapping
+/*  @PostMapping
   public ResponseEntity<DepositCreateResponse> create(
       @AuthenticationPrincipal LoginUser loginUser,
       @Valid @RequestBody DepositCreateRequest req
@@ -106,7 +106,7 @@ public class DepositController {
     return ResponseEntity
         .created(URI.create("/api/deposits/" + created.getId()))
         .body(created);
-  }
+  }*/
 
   @GetMapping("/{id}")
   public ResponseEntity<DepositAdminDetailResponse> getDeposit(
@@ -117,22 +117,23 @@ public class DepositController {
     return ResponseEntity.ok(dto);
   }
 
-  @PostMapping("/{id}/refund")
+/*  @PostMapping("/{id}/refund")
   public ResponseEntity<DepositRefundResponse> refundFull(
       @PathVariable("id") Long depositId,
       @AuthenticationPrincipal LoginUser loginUser
   ) {
     var resp = depositService.refundFull(depositId, loginUser);
     return ResponseEntity.ok(resp);
-  }
+  }*/
 
 
-  @PostMapping("/{id}/forfeit")
+/*  @PostMapping("/{id}/forfeit")
   public ResponseEntity<DepositForfeitResponse> forfeitFull(
       @PathVariable("id") Long depositId,
       @AuthenticationPrincipal LoginUser loginUser
   ) {
     var resp = depositService.forfeitFull(depositId, loginUser);
     return ResponseEntity.ok(resp);
-  }
+  }*/
+
 }

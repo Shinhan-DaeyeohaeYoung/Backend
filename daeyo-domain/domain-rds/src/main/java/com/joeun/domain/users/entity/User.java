@@ -59,6 +59,9 @@ public class User {
   @Column(name = "role", length = 32)
   private String role;
 
+  @Column(name = "point", nullable = false)
+  private long point;
+
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;

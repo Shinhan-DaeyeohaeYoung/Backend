@@ -109,9 +109,9 @@ public class DepositService {
         ))
         .toList();
   }
-
+/*
   public DepositCreateResponse createDeposit(
-      LoginUser loginUser,
+      Long userId,
       DepositCreateRequest req
   ) {
     try {
@@ -119,7 +119,7 @@ public class DepositService {
           req.getUser_id(),
           req.getOrganization_id(),
           req.getAmount(),
-          /* rentalId */ null,
+          *//* rentalId *//* null,
           req.getUniversity_id()
       );
       return DepositMappers.toCreateResponse(saved);
@@ -128,7 +128,7 @@ public class DepositService {
     } catch (IllegalStateException e) {
       throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage(), e);
     }
-  }
+  }*/
 
   public DepositAdminDetailResponse getDepositDetail(Long depositId, LoginUser actor) {
     // 1) 대상 조회 (없으면 내부에서 404 던짐)
@@ -164,9 +164,11 @@ public class DepositService {
         .refundAccountId(d.getRefundAccount() == null ? null : d.getRefundAccount().getId())
         .build();
   }
+/*
 
-  public DepositRefundResponse refundFull(Long depositId, LoginUser actor) {
+  public DepositRefundResponse refundFull(Long depositId, Long userId) {
     final Deposit d;
+
     try {
       d = depositDomainService.getByIdWithAllJoinsOrThrow(depositId);
     } catch (NoSuchElementException e) {
@@ -174,7 +176,7 @@ public class DepositService {
     }
 
     // 소유자 검증
-    if (d.getUser() == null || !actor.id().equals(d.getUser().getId())) {
+    if (d.getUser() == null || !userId.equals(d.getUser().getId())) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "only owner can refund");
     }
 
@@ -190,7 +192,7 @@ public class DepositService {
 
     try {
       // 전액 환불 상태 전이 수행
-      var updated = depositDomainService.refundFull(d, actor.id());
+      var updated = depositDomainService.refundFull(d, userId);
       return DepositRefundResponse.builder()
           .id(updated.getId())
           .status(updated.getStatus().name())
@@ -203,8 +205,9 @@ public class DepositService {
       throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage());
     }
   }
+*/
 
-  public DepositForfeitResponse forfeitFull(Long depositId, LoginUser actor) {
+/*  public DepositForfeitResponse forfeitFull(Long depositId, Long userId) {
     final Deposit d;
     try {
       d = depositDomainService.getByIdWithAllJoinsOrThrow(depositId);
@@ -218,7 +221,7 @@ public class DepositService {
     }
 
     boolean isAdmin = orgDomainService.existsByUserOrgAndRole(
-        actor.id(), d.getOrganization().getId(), UserOrgRole.ORG_ADMIN);
+        userId, d.getOrganization().getId(), UserOrgRole.ORG_ADMIN);
     if (!isAdmin) {
       throw new ResponseStatusException(HttpStatus.FORBIDDEN, "org admin required");
     }
@@ -237,7 +240,7 @@ public class DepositService {
     }
 
     try {
-      var updated = depositDomainService.forfeitFull(d, actor.id());
+      var updated = depositDomainService.forfeitFull(d, userId);
       return DepositForfeitResponse.builder()
           .id(updated.getId())
           .status(updated.getStatus().name())
@@ -246,6 +249,6 @@ public class DepositService {
     } catch (IllegalStateException e) {
       throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage());
     }
-  }
+  }*/
 
 }

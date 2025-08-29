@@ -4,13 +4,13 @@ import com.joeun.domain.university.entity.University;
 import com.joeun.domain.university.entity.UniversityPoint;
 import com.joeun.domain.university.repository.UniversityPointRepository;
 import com.joeun.domain.university.repository.UniversityRepository;
-import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -36,4 +36,11 @@ public class UniversityDomainService {
   public List<UniversityPoint> findTop10ByPoint() {
     return univPointRepo.findTop10ByOrderByPointDesc();
   }
+
+  @Transactional(readOnly = true)
+  public int getRankByUniversityId(Long universityId) {
+    Integer rank = univPointRepo.findRankByUniversityId(universityId); // native 쿼리
+    return (rank != null) ? rank : 0;
+  }
+
 }
