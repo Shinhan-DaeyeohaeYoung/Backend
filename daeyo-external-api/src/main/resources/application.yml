@@ -35,7 +35,6 @@ openai:
   model: gpt-4o-mini
   base-url: "${OPENAI_BASE_URL:https://api.openai.com}"
 
-
 ssafy:
   base-url: "https://finopenapi.ssafy.io"
   institution-code: "00100"

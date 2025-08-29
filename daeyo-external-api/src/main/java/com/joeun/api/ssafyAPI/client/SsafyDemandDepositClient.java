@@ -5,6 +5,8 @@ import com.joeun.api.ssafyAPI.dto.CreateDemandDepositAccountRequest;
 import com.joeun.api.ssafyAPI.dto.CreateDemandDepositAccountResponse;
 import com.joeun.api.ssafyAPI.dto.InquireDemandDepositAccountBalanceRequest;
 import com.joeun.api.ssafyAPI.dto.InquireDemandDepositAccountBalanceResponse;
+import com.joeun.api.ssafyAPI.dto.UpdateDemandDepositAccountDepositRequest;
+import com.joeun.api.ssafyAPI.dto.UpdateDemandDepositAccountDepositResponse;
 import com.joeun.api.ssafyAPI.dto.UpdateDemandDepositAccountTransferRequest;
 import com.joeun.api.ssafyAPI.dto.UpdateDemandDepositAccountTransferResponse;
 import com.joeun.global.config.FeignConfig;
@@ -27,9 +29,15 @@ public interface SsafyDemandDepositClient {
   InquireDemandDepositAccountBalanceResponse inquireDemandDepositAccountBalance(
       @RequestBody InquireDemandDepositAccountBalanceRequest request);
 
-  // 개인 -> 조직 계좌 이체
+  // 계좌 이체
   @PostMapping("/ssafy/api/v1/edu/demandDeposit/updateDemandDepositAccountTransfer")
   UpdateDemandDepositAccountTransferResponse updateDemandDepositAccountTransfer(
       @RequestBody UpdateDemandDepositAccountTransferRequest request);
+
+  // 송금 (기본 10만원)
+  @PostMapping("/ssafy/api/v1/edu/demandDeposit/updateDemandDepositAccountDeposit")
+  UpdateDemandDepositAccountDepositResponse updateDemandDepositAccountDeposit(
+      @RequestBody UpdateDemandDepositAccountDepositRequest request
+  );
 
 }

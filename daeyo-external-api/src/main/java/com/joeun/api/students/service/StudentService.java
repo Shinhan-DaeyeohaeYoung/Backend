@@ -6,6 +6,7 @@ import com.joeun.api.ssafyAPI.dto.AccountApiHeader;
 import com.joeun.api.ssafyAPI.dto.CreateDemandDepositAccountRequest;
 import com.joeun.api.ssafyAPI.dto.MemberCreateRequest;
 import com.joeun.api.ssafyAPI.dto.MemberCreateResponse;
+import com.joeun.api.ssafyAPI.dto.UpdateDemandDepositAccountDepositRequest;
 import com.joeun.api.students.dto.StudentCreateRequest;
 import com.joeun.api.students.dto.StudentResponse;
 import com.joeun.api.students.dto.StudentSignupRequest;
@@ -220,12 +221,50 @@ public class StudentService {
                   false   // 최초 isVerified=false
           );
 
+      try {
+        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String now   = LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
+        String idem  = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+            + ThreadLocalRandom.current().nextInt(100000, 999999);
+
+        var depositHeader = AccountApiHeader.builder()
+            .apiName("updateDemandDepositAccountDeposit")
+            .transmissionDate(today)
+            .transmissionTime(now)
+            .institutionCode("00100")
+            .fintechAppNo("001")
+            .apiServiceCode("updateDemandDepositAccountDeposit")
+            .institutionTransactionUniqueNo(idem)
+            .apiKey(ssafyMemberAdminApiKey)   // ← 관리자 키
+            .userKey(mRes.getUserKey())       // ← 방금 받은 사용자 userKey
+            .build();
+
+        var depositReq = UpdateDemandDepositAccountDepositRequest.builder()
+            .header(depositHeader)
+            .accountNo(extAccountNo)           // 방금 개설한 사용자 계좌
+            .transactionBalance("100000")      // ← 100,000원
+            .transactionSummary("(수시입출금) : 입금")
+            .build();
+
+        var depositRes = ssafyDemandDepositClient.updateDemandDepositAccountDeposit(depositReq);
+        if (depositRes == null || depositRes.getHeader() == null
+            || !"H0000".equals(depositRes.getHeader().getResponseCode())) {
+          String msg = (depositRes != null && depositRes.getHeader() != null)
+              ? depositRes.getHeader().getResponseMessage() : "upstream error";
+          log.warn("Initial deposit failed for userId={}, reason={}", u.getId(), msg);
+        } else {
+          log.info("Initial deposit success: userId={}, amount=100000, idem={}",
+              u.getId(), depositRes.getHeader().getInstitutionTransactionUniqueNo());
+        }
+      } catch (Exception ex) {
+        log.warn("Initial deposit error for userId={}", u.getId(), ex);
+      }
+
     } catch (Exception e) {
       // 계좌 개설 실패해도 회원가입은 진행 (운영정책에 맞게 경고/재시도 큐잉)
       log.warn("SSAFY account open failed for userId={}", u.getId(), e);
     }
     // API 끝
-
 
     // 7) 학생 상태 변경
     studentDomainService.markRegistered(s);
