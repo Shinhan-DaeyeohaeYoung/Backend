@@ -13,6 +13,7 @@ import com.joeun.domain.university.entity.University;
 import com.joeun.global.util.AccountCipher;
 import com.joeun.global.util.JwtUtil;
 import com.joeun.service.user.UserDomainService;
+import jakarta.transaction.Transactional;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -107,4 +108,5 @@ public class UserService {
         saved.isVerified()
     );
   }
+
 }

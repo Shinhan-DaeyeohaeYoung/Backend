@@ -2,6 +2,7 @@ package com.joeun.service.user;
 
 import com.joeun.domain.students.entity.Student;
 import com.joeun.domain.university.entity.University;
+import com.joeun.domain.university.repository.UniversityPointRepository;
 import com.joeun.domain.university.repository.UniversityRepository;
 import com.joeun.domain.users.entity.User;
 import com.joeun.domain.users.entity.UserBankAccount;
@@ -19,6 +20,7 @@ public class  UserDomainService {
 
   private final UserRepository userRepo;
   private final UniversityRepository univRepo;
+  private final UniversityPointRepository univPointRepo;
   private final UserBankAccountRepository accountRepo;
 
   public User createUser(User user){
@@ -86,5 +88,24 @@ public class  UserDomainService {
         .build();
     return userRepo.save(u);
   }
+
+  @Transactional
+  public void addOnRefund(Long userId) {
+    // 1) 사용자 포인트 +100 (원자적 증분)
+    int updated = userRepo.addPoint(userId, 100L);
+    if (updated == 0) {
+      throw new IllegalStateException("User not found or point update failed: " + userId);
+    }
+
+    // 2) 해당 사용자의 대학 식별
+    Long univId = userRepo.findUniversityIdByUserId(userId);
+    if (univId == null) {
+      throw new IllegalStateException("University not found for user: " + userId);
+    }
+
+    // 3) 대학 포인트 +100 (UPSERT 원자적 증분)
+    univPointRepo.upsertAdd(univId, 100L);
+  }
+
 
 }

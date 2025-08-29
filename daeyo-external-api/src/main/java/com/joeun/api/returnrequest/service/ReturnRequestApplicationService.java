@@ -3,12 +3,14 @@ package com.joeun.api.returnrequest.service;
 import com.joeun.api.organization.dto.MyOrganizationResponse;
 import com.joeun.api.organization.service.OrganizationService;
 import com.joeun.api.returnrequest.dto.*;
+import com.joeun.api.user.service.UserService;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.returnrequest.entity.ReturnRequest;
 import com.joeun.domain.returnrequest.entity.ReturnRequestStatus;
 import com.joeun.global.config.LoginUser;
 import com.joeun.service.rental.RentalDomainService;
 import com.joeun.service.returnrequest.ReturnRequestService;
+import com.joeun.service.user.UserDomainService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +28,7 @@ public class ReturnRequestApplicationService {
     private final ReturnRequestService domain;            // 도메인 서비스(기존)
     private final OrganizationService organizationService; // 멤버십/관리자 확인
     private final RentalDomainService rentalDomainService; // rentalId → (u,o,owner) 해석
+    private final UserDomainService userDomainService;
 
     /* ===== 공통 헬퍼 ===== */
 
@@ -88,6 +91,13 @@ public class ReturnRequestApplicationService {
 
     public ReturnRequest approve(LoginUser loginUser, Long id, Long organizationId, String imageKey) {
         // 권한은 도메인에서도 재검증한다고 가정하지만, 사전으로 관리자 멤버십 한 번 체크
-        return domain.approve(loginUser.id(),loginUser.universityId(), id,organizationId,imageKey); //허용한 유저 아이디, 리퀘스트id, 조직 id, 이미지키
+        ReturnRequest approve = domain.approve(loginUser.id(), loginUser.universityId(), id,
+            organizationId, imageKey);//허용한 유저 아이디, 리퀘스트id, 조직 id, 이미지키
+
+        // 점수 올려
+        Long userId = approve.getUserId();
+        userDomainService.addOnRefund(userId);
+
+        return approve;
     }
 }

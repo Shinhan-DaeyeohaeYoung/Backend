@@ -10,6 +10,7 @@ import lombok.Data;
 public class UniversityPointResponse {
   private Long university_id;
   private Long point;        // 정수 포인트 (필요 시 BigDecimal로 교체)
+  private Integer rank;
   private String created_at;
   private String updated_at; // ISO 8601 문자열 응답
 }

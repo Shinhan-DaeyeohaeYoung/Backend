@@ -51,25 +51,25 @@ public class UniversityService {
             .updatedAt(univ.getUpdatedAt())
             .build();
     }
-
     public UniversityPointResponse getMyUniversityPoints(LoginUser loginUser) {
         User user = userDomainService.findById(loginUser.id())
-            .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED, "User not found"));
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
 
         if (user.getUniversity() == null) {
-            throw new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "User has no university assigned");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User has no university assigned");
         }
 
-        UniversityPoint up = univDomainService
-            .getByUniversityId(user.getUniversity().getId())
-            .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND, "University point not found"));
+        Long univId = user.getUniversity().getId();
+
+        UniversityPoint up = univDomainService.getByUniversityId(univId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "University point not found"));
+
+        int rank = univDomainService.getRankByUniversityId(univId);
 
         return UniversityPointResponse.builder()
-            .university_id(up.getUniversity().getId())
+            .university_id(univId)
             .point(up.getPoint())
+            .rank(rank)
             .created_at(up.getCreatedAt() != null ? up.getCreatedAt().toString() : null)
             .updated_at(up.getUpdatedAt() != null ? up.getUpdatedAt().toString() : null)
             .build();

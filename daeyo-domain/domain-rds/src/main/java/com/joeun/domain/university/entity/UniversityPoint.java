@@ -9,7 +9,12 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "university_point")
+@Table(
+    name = "university_point",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_university_point_univ", columnNames = "university_id"
+    )
+)
 @Data
 @NoArgsConstructor
 public class UniversityPoint {
@@ -30,7 +35,7 @@ public class UniversityPoint {
 
   /* ===== 포인트 값 ===== */
   @Column(name = "point", nullable = false)
-  private Long point;
+  private long point;
 
   /* ===== 생성/수정 시각 ===== */
   @CreationTimestamp
@@ -40,4 +45,5 @@ public class UniversityPoint {
   @UpdateTimestamp
   @Column(name = "updated_at", nullable = false)
   private LocalDateTime updatedAt;
+
 }
