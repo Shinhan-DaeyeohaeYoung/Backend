@@ -114,6 +114,7 @@ public class RentalDomainService {
 //        }
 //    }
 
+
     @Transactional(rollbackFor = Exception.class)
     public Long reserveUnit(Long u, Long o, Long userId, Long itemId, Long unitId, int ttlMinutes) {
 
@@ -424,4 +425,9 @@ public class RentalDomainService {
     public void createTempRental(Rental rental) {
         rentalRepository.save(rental);
     }
+    @Transactional(readOnly = true)
+    public List<Rental> listMyActiveReservationsByOrganizationRaw(Long u, Long organizationId, Long userId) {
+        return rentalRepository.findMyReservedActiveByOrg(u, userId, organizationId);
+    }
+
 }
