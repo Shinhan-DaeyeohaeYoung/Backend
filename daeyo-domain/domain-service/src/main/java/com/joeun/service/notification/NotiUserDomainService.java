@@ -21,7 +21,7 @@ public class NotiUserDomainService {
         return notiUserRdsService.findNotiUserById(id);
     }
 
-    public List<NotiUser> findNotiUserByUserId(Long userId) {
+    public NotiUser findNotiUserByUserId(Long userId) {
         return notiUserRdsService.findNotiUserByUserId(userId);
     }
 

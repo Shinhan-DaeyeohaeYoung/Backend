@@ -33,8 +33,9 @@ public class NotiUserRdsService {
     }
 
     @Transactional(readOnly = true)
-    public List<NotiUser> findNotiUserByUserId(Long userId) {
-        return notiUserRepository.findAllByUserId(userId);
+    public NotiUser findNotiUserByUserId(Long userId) {
+        return notiUserRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("NotiUser not found for userId: " + userId));
     }
 
     @Transactional

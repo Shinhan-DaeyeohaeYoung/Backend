@@ -51,12 +51,10 @@ public class NotificationService {
                 .isRead(false)
                 .build();
 
-        List<NotiUser> notiUser = notiUserDomainService.findNotiUserByUserId(userId);
+        NotiUser notiUser = notiUserDomainService.findNotiUserByUserId(userId);
         try {
-            for(NotiUser target : notiUser) {
-                notificationInfraService.sendNotification(notification, target);
-                notificationDomainService.saveNotification(notification);
-            }
+            notificationInfraService.sendNotification(notification, notiUser);
+            notificationDomainService.saveNotification(notification);
         } catch (Exception e) {
             log.error("Failed to send notification to userId {}: {}", userId, e);
         }
