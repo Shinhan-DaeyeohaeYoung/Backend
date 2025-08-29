@@ -35,6 +35,15 @@ openai:
   model: gpt-4o-mini
   base-url: "${OPENAI_BASE_URL:https://api.openai.com}"
 
+
+ssafy:
+  base-url: "https://finopenapi.ssafy.io"
+  institution-code: "00100"
+  fintech-app-no: "001"
+  api-key: "a4c6573967584fa9a4767646a19e1227"
+  account-type: "001-1-48d8e5e42e5d4c"
+
+
 file:
   storage: mock
   s3:

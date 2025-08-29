@@ -3,6 +3,7 @@ package com.joeun.domain.organization.entity;
 import com.joeun.domain.deposit.entity.Deposit;
 import com.joeun.domain.organization.types.OrganizationType;
 import com.joeun.domain.university.entity.University;
+import com.joeun.domain.users.entity.UserApiCredential;
 import com.joeun.domain.users.entity.UserOrgMembership;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -80,6 +81,16 @@ public class Organization {
 
   @OneToMany(mappedBy = "organization", fetch = FetchType.LAZY)
   private List<Deposit> deposits = new ArrayList<>();
+
+  @OneToMany(mappedBy = "organization", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+  private List<OrgApiCredential> apiCredentials = new ArrayList<>();
+
+  // 헬퍼 메서드
+  public void addApiCredential(OrgApiCredential credential) {
+    this.apiCredentials.add(credential);
+    credential.setOrganization(this);
+  }
+
 
   /*
   @OneToMany(mappedBy = "organization", fetch = FetchType.LAZY)

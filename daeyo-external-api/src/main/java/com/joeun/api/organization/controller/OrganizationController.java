@@ -55,12 +55,11 @@ public class OrganizationController {
     return ResponseEntity.ok(orgService.getMyOrganization(loginUser, organizationId));
   }
 
-  @GetMapping("/{id}/bank-accounts")
-  public ResponseEntity<List<OrgBankAccountResponse>> getOrganizationAccounts(
+  @GetMapping("/{id}/bank-account")
+  public ResponseEntity<OrgBankAccountResponse> getOrganizationPrimaryAccount(
       @PathVariable("id") Long orgId
-      // , @AuthenticationPrincipal LoginUser loginUser
   ) {
-    List<OrgBankAccountResponse> body = orgService.listOrganizationBankAccounts(orgId /*, loginUser*/);
+    OrgBankAccountResponse body = orgService.getOrganizationPrimaryAccountWithBalance(orgId);
     return ResponseEntity.ok(body);
   }
 

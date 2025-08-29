@@ -62,6 +62,15 @@ public class User {
   @Column(name = "point", nullable = false)
   private long point;
 
+  @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<UserApiCredential> apiCredentials = new ArrayList<>();
+
+  // 헬퍼 메서드 (연관관계 편의)
+  public void addApiCredential(UserApiCredential credential) {
+    apiCredentials.add(credential);
+    credential.setUser(this);
+  }
+
   @CreationTimestamp
   @Column(name = "created_at", nullable = false, updatable = false)
   private LocalDateTime createdAt;

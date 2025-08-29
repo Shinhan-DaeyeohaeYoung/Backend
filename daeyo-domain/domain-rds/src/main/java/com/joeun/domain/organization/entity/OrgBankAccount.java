@@ -19,13 +19,12 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public class OrgBankAccount {
 
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(columnDefinition = "bigint")
   private Long id;
 
   @Column(name = "organization_id", nullable = false, columnDefinition = "bigint")
-  private Long organizationId;  // 단방향 숫자 FK(간단)
+  private Long organizationId;
 
   @Column(name = "bank_code", length = 10)
   private String bankCode;
@@ -36,8 +35,9 @@ public class OrgBankAccount {
   @Column(name = "account_holder_name", length = 100, nullable = false)
   private String accountHolderName;
 
-  @Column(name = "account_no_masked", length = 32)
-  private String accountNoMasked;
+  /** ✅ 평문 저장 (마스킹/암호화 없음) */
+  @Column(name = "account_no", length = 32, nullable = false)
+  private String accountNo;
 
   @Column(name = "is_primary", nullable = false, columnDefinition = "boolean default false")
   private boolean isPrimary;
