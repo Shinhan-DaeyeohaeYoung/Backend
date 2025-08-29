@@ -3,10 +3,12 @@ package com.joeun.api.returnrequest.service;
 import com.joeun.api.organization.dto.MyOrganizationResponse;
 import com.joeun.api.organization.service.OrganizationService;
 import com.joeun.api.returnrequest.dto.*;
+import com.joeun.api.vision.yolo.YoloClient;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.returnrequest.entity.ReturnRequest;
 import com.joeun.domain.returnrequest.entity.ReturnRequestStatus;
 import com.joeun.global.config.LoginUser;
+import com.joeun.infra.aws.s3.service.S3ImageInfraService;
 import com.joeun.service.rental.RentalDomainService;
 import com.joeun.service.returnrequest.ReturnRequestService;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -25,7 +28,9 @@ public class ReturnRequestApplicationService {
 
     private final ReturnRequestService domain;            // 도메인 서비스(기존)
     private final OrganizationService organizationService; // 멤버십/관리자 확인
-    private final RentalDomainService rentalDomainService; // rentalId → (u,o,owner) 해석
+    private final RentalDomainService rentalDomainService;
+    private final S3ImageInfraService s3ImageInfraService;
+    private final YoloClient yoloClient;
 
     /* ===== 공통 헬퍼 ===== */
 
@@ -73,10 +78,47 @@ public class ReturnRequestApplicationService {
         if (!Objects.equals(r.getUserId(), loginUser.id())) {
             throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN, "You are not the owner of this rental");
         }
-        return domain.create(
+        // 도메인에 생성(원본 키 저장)
+        ReturnRequest rr = domain.create(
                 r.getUniversityId(), r.getOrganizationId(), loginUser.id(),
                 req.rentalId(), req.imageKey(), req.imageMime(), req.imageHash(), req.imageTakenAt()
         );
+
+        // 3) YOLO 호출(실패해도 예외 올리지 않음)
+        String originalKey = req.imageKey();
+        try {
+            // (1) presigned GET (짧은 TTL)
+            String getUrl = s3ImageInfraService.getDownloadPresignedUrl(originalKey, Duration.ofMinutes(3));
+
+            // (2) YOLO REST 호출
+            var detectReq = new YoloClient.DetectCropRequest(
+                    getUrl,
+                    "univ/%d/return-requests/%d/crops/".formatted(rr.getUniversityId(), rr.getId()),
+                    0.30, 1, 0.25, 512
+            );
+            var resp = yoloClient.detectCrop(detectReq);
+
+            // (3) detection_meta JSON 구성
+            String metaJson = """
+                      { "original_key":"%s", "crop_key":%s, "status":"%s", "detection": %s }
+                    """.formatted(
+                    originalKey,
+                    resp != null && resp.cropKey() != null ? "\"" + resp.cropKey() + "\"" : "null",
+                    (resp != null && resp.cropKey() != null) ? "success" : "no_detection",
+                    (resp != null && resp.detectionMetaJson() != null) ? resp.detectionMetaJson() : "null"
+            );
+
+            // (4) 반영: 크롭 성공 시 크롭키로 덮어쓰기, 아니면 원본 유지
+            String newKey = (resp != null && resp.cropKey() != null) ? resp.cropKey() : rr.getSubmittedImageKey();
+            rr = domain.applyYoloCropOverwrite(rr.getId(), rr.getUniversityId(), rr.getOrganizationId(), newKey, metaJson);
+            return rr;
+        }   catch (Exception e) {
+            String metaJson = """
+              { "original_key":"%s", "status":"yolo_failed", "error":"%s" }
+            """.formatted(originalKey, e.getClass().getSimpleName());
+            // 실패 시: 원본 유지 + 실패 메타 기록
+            return domain.applyYoloCropOverwrite(rr.getId(), rr.getUniversityId(), rr.getOrganizationId(), rr.getSubmittedImageKey(), metaJson);
+        }
     }
 
     public ReturnRequest cancel(LoginUser loginUser, Long id,Long organizationId, Long universityId) {

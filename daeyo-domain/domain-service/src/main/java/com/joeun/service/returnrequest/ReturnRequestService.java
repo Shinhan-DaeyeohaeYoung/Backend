@@ -227,4 +227,22 @@ public class ReturnRequestService {
                 .map(UnitPhoto::getImageKey)
                 .orElse(null);
     }
+
+
+    //YOLO결과 반영
+    @Transactional
+    public ReturnRequest applyYoloCropOverwrite(Long rrId,
+                                                Long universityId,
+                                                Long organizationId,
+                                                String newSubmittedImageKey,
+                                                String detectionMetaJson) {
+        ReturnRequest rr = returnRequestRepository
+                .lockByIdAndTenant(rrId, universityId, organizationId)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "returnRequest not found: id=%d, univ=%d, org=%d".formatted(rrId, universityId, organizationId)));
+
+        // 엔티티 도메인 메서드로 반영 (크롭 키로 덮어쓰기 + 메타 저장)
+        rr.applyYoloCropOverwrite(newSubmittedImageKey, detectionMetaJson);
+        return rr; // JPA dirty checking으로 커밋 시 반영
+    }
 }

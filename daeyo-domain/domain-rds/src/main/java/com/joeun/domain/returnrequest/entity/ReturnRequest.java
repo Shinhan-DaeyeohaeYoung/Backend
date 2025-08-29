@@ -91,6 +91,15 @@ public class ReturnRequest {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Lob
+    @Column(name = "detection_meta")
+    private String detectionMeta;
+
+    // YOLO 결과 반영 메서드 (크롭키로 덮어쓰기 + 메타 저장)
+    public void applyYoloCropOverwrite(String newKey, String detectionMetaJson) {
+        this.submittedImageKey = newKey;        //키 덮어쓰기
+        this.detectionMeta = detectionMetaJson; // 저장(원본키도 meta에 함께 넣을 것)
+    }
 
     /* ====== 팩토리/도메인 메서드 ====== */
 

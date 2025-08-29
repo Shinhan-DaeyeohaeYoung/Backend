@@ -95,6 +95,12 @@ public class S3ImageInfraService implements ImageInfraService {
         return keys.stream().collect(Collectors.toMap(k -> k, this::getDownloadPresignedUrl));
     }
 
+    /** ✅ 추가: YOLO용 등 짧은 TTL로 쓰는 GET presign */
+    public String getDownloadPresignedUrl(String key, Duration ttl) {
+        return getDownloadPresignedUrl(key, ttl, null);
+    }
+
+
     private String generateKey(ImageType imageType, Long userId, String baseName, String ext) {
         String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
         String uuid = UUID.randomUUID().toString();
@@ -120,5 +126,31 @@ public class S3ImageInfraService implements ImageInfraService {
         // 너무 긴 이름은 잘라냄 (선택)
         return s.length() > 60 ? s.substring(0, 60) : s;
     }
+
+    //content-type 지정까지 제어하고 싶을 때
+    private String getDownloadPresignedUrl(String key, Duration ttl, String overrideContentType) {
+        // 확장자로 content-type 추정
+        String ext = "";
+        int idx = key.lastIndexOf('.');
+        if (idx > 0 && idx < key.length() - 1) ext = key.substring(idx + 1);
+        String contentType = overrideContentType != null ? overrideContentType : getContentType(ext);
+
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(key)
+                // 브라우저 렌더링 힌트 (백엔드→백엔드 통신이라 상관없지만 있어도 무방)
+                .responseContentDisposition("inline")
+                .responseContentType(contentType) //
+                .build();
+
+        GetObjectPresignRequest presign = GetObjectPresignRequest.builder()
+                .signatureDuration(ttl)
+                .getObjectRequest(getObjectRequest)
+                .build();
+
+        PresignedGetObjectRequest presigned = s3Presigner.presignGetObject(presign);
+        return presigned.url().toString();
+    }
+
 }
 
