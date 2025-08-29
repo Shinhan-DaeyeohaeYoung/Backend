@@ -8,7 +8,9 @@ import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.returnrequest.entity.ReturnRequest;
 import com.joeun.domain.returnrequest.entity.ReturnRequestStatus;
 import com.joeun.global.config.LoginUser;
+import com.joeun.infra.aws.s3.service.S3ImageInfraService;
 import com.joeun.service.rental.RentalDomainService;
+import com.joeun.service.returnrequest.ReturnRequestQueryService;
 import com.joeun.service.returnrequest.ReturnRequestService;
 import com.joeun.service.user.UserDomainService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,8 @@ public class ReturnRequestApplicationService {
     private final OrganizationService organizationService; // 멤버십/관리자 확인
     private final RentalDomainService rentalDomainService; // rentalId → (u,o,owner) 해석
     private final UserDomainService userDomainService;
+    private final S3ImageInfraService s3ImageInfraService;
+    private final ReturnRequestQueryService rrQueryService;
 
     /* ===== 공통 헬퍼 ===== */
 
@@ -56,16 +60,71 @@ public class ReturnRequestApplicationService {
                 HttpStatus.BAD_REQUEST, "organizationId is required (admin memberships=" + adminMemberships.size() + ")");
     }
 
-    /* ===== 관리자 목록/상세 ===== */
+    public Page<ReturnRequestResponse> listForAdminWithUrls(
+            LoginUser loginUser, Long organizationId, ReturnRequestStatus status, Pageable pageable) {
 
-    public Page<ReturnRequest> listForAdmin(LoginUser loginUser, Long organizationId, ReturnRequestStatus status, Pageable pageable) {
         var admin = pickAdminOrg(loginUser, organizationId);
-        return domain.listForAdmin(admin.getUniversityId(), admin.getOrganizationId(), status, pageable);
+        Page<ReturnRequest> page = domain.listForAdmin(
+                admin.getUniversityId(), admin.getOrganizationId(), status, pageable);
+
+        return page.map(rr -> {
+            String key = rr.getSubmittedImageKey();
+            String url = (key == null || key.isBlank()) ? null
+                    : s3ImageInfraService.getDownloadPresignedUrl(key);
+            return ReturnRequestResponse.from(rr, url);
+        });
     }
+    public ReturnRequestResponse detailForAdminWithUrls(
+            LoginUser loginUser, Long id, Long organizationId) {
 
-    public ReturnRequest detailForAdmin(LoginUser loginUser, Long id, Long organizationId) {
         var admin = pickAdminOrg(loginUser, organizationId);
-        return domain.detailForAdmin(admin.getUniversityId(), admin.getOrganizationId(), id);
+        var rr = domain.detailForAdmin(admin.getUniversityId(), admin.getOrganizationId(), id);
+
+        var keys = rrQueryService.getBeforeAfterKeys(id);
+        String afterKey = keys.afterKey();
+        String afterUrl = (afterKey == null || afterKey.isBlank()) ? null
+                : s3ImageInfraService.getDownloadPresignedUrl(afterKey);
+
+         String beforeKey = keys.beforeKey();
+         String beforeUrl = (beforeKey == null || beforeKey.isBlank()) ? null
+                : s3ImageInfraService.getDownloadPresignedUrl(beforeKey);
+
+//        return ReturnRequestResponse.from(rr, afterUrl);
+         return ReturnRequestResponse.from(rr, afterUrl, beforeKey, beforeUrl);
+    }
+    /* ===== 관리자 목록/상세 ===== */
+//    public Page<ReturnRequestResponse> listForAdmin(
+//            LoginUser loginUser, Long organizationId, ReturnRequestStatus status, Pageable pageable) {
+//        var page = domain.listForAdmin(loginUser.universityId(), organizationId, status, pageable);
+//
+//        return page.map(rr -> {
+//            String key = rr.getSubmittedImageKey();
+//            String url = (key == null || key.isBlank()) ? null
+//                    : s3ImageInfraService.getDownloadPresignedUrl(key); // 필요시 TTL 오버로드
+//            return ReturnRequestResponse.from(rr, url);
+//        });
+//    }
+
+
+//    public Page<ReturnRequest> listForAdmin(LoginUser loginUser, Long organizationId, ReturnRequestStatus status, Pageable pageable) {
+//        var admin = pickAdminOrg(loginUser, organizationId);
+//        return domain.listForAdmin(admin.getUniversityId(), admin.getOrganizationId(), status, pageable);
+//    }
+
+    public ReturnRequestResponse detailForAdmin(LoginUser loginUser, Long id, Long organizationId) {
+        var rr = domain.detailForAdmin(loginUser.universityId(), organizationId, id);
+
+        // before/after 키
+        var keys = rrQueryService.getBeforeAfterKeys(id);
+        String beforeKey = keys.beforeKey();
+        String afterKey  = keys.afterKey(); // rr.getSubmittedImageKey()와 동일
+
+        String beforeUrl = (beforeKey == null || beforeKey.isBlank()) ? null
+                : s3ImageInfraService.getDownloadPresignedUrl(beforeKey);
+        String afterUrl  = (afterKey == null || afterKey.isBlank()) ? null
+                : s3ImageInfraService.getDownloadPresignedUrl(afterKey);
+
+        return ReturnRequestResponse.from(rr, afterUrl, beforeKey, beforeUrl);
     }
 
     /* ===== 유저 생성/취소 ===== */

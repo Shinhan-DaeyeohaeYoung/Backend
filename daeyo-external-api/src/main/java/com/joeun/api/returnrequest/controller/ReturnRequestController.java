@@ -31,12 +31,11 @@ public class ReturnRequestController {
     @GetMapping("/admin/return-requests")
     public ResponseEntity<Page<ReturnRequestResponse>> listForAdmin(
             @AuthenticationPrincipal LoginUser loginUser,
-            @Parameter(description = "조직 ID(선택). 관리자 멤버십이 여러개면 필수") @RequestParam(required = false) Long organizationId,
+            @Parameter(description = "조직 ID") @RequestParam(required = false) Long organizationId,
             @Parameter(description = "상태 필터", example = "REQUESTED") @RequestParam(required = false) ReturnRequestStatus status,
             @ParameterObject Pageable pageable
     ) {
-        var page = app.listForAdmin(loginUser, organizationId, status, pageable)
-                .map(ReturnRequestResponse::from);
+        var page = app.listForAdminWithUrls(loginUser, organizationId, status, pageable);
         return ResponseEntity.ok(page);
     }
 
@@ -49,8 +48,8 @@ public class ReturnRequestController {
             @PathVariable Long id,
             @RequestParam(required = false) Long organizationId
     ) {
-        var rr = app.detailForAdmin(loginUser, id, organizationId);
-        return ResponseEntity.ok(ReturnRequestResponse.from(rr));
+        var dto = app.detailForAdminWithUrls(loginUser, id, organizationId);
+        return ResponseEntity.ok(dto);
     }
 
     /** 3) (유저) 반납 신청 */
