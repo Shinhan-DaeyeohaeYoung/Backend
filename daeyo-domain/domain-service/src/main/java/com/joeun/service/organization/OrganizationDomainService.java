@@ -82,4 +82,7 @@ public class OrganizationDomainService {
     return orgBankAccountRepository.findAllByOrganizationId(orgId);
   }
 
+    public List<Long> findAllOrganizationIds() {
+        return organizationRepository.findAllOrganizationIds();
+    }
 }

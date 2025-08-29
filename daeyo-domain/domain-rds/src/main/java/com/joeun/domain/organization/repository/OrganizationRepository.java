@@ -20,4 +20,9 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
     """)
     List<Long> findOrgIdsByUserId(@Param("userId") Long userId);
 
+    @Query("""
+    select o.id
+        from Organization o
+    """)
+    List<Long> findAllOrganizationIds();
 }

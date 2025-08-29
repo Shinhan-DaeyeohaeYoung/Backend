@@ -14,6 +14,7 @@ dependencies {
     api project(':daeyo-domain:domain-service')
     api project(':daeyo-infra')
     api project(':daeyo-common')
+    api project(':daeyo-batch')
 
     // Spring Boot Web
     implementation 'org.springframework.boot:spring-boot-starter-web'
