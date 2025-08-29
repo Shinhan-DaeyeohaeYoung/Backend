@@ -1,5 +1,6 @@
 package com.joeun.api.rental.service;
 
+import com.joeun.api.deposit.service.DepositService;
 import com.joeun.api.item.dto.ItemDtos;
 import com.joeun.api.organization.dto.MyOrganizationResponse;
 import com.joeun.api.organization.service.OrganizationService;
@@ -14,6 +15,7 @@ import com.joeun.domain.rental.entity.RentalStatus;
 import com.joeun.global.config.LoginUser;
 import com.joeun.infra.aws.s3.service.ImageInfraService;
 import com.joeun.service.rental.RentalDomainService;
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,7 @@ public class RentalApplicationService {
     private final OrganizationService organizationService;      //  멤버십/권한 확인용
     private final UnitPhotoDomainService unitPhotoDomainService;
     private final ImageInfraService imageInfraService;
+    private final DepositService depositService;
 
     private static final DateTimeFormatter F = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -137,7 +140,15 @@ public class RentalApplicationService {
     }
 
     public RentalDtos.ApproveResponse approve(LoginUser loginUser, Long rentalId) {
-        UO uo = resolveRentalUO(rentalId);
+        UO uo = resolveRentalUO(rentalId); // uo.u = universityId, uo.o = organizationId
+
+        // 보증금 이체 API 로직 시작
+        BigDecimal amount = domain.precheckAndGetDepositAmount(uo.u, uo.o, rentalId, loginUser.id());
+
+        // 3) 🔐 외부 이체(개인 → 조직) — App 레이어에서만 외부 API 호출
+        String memo = "보증금 예치 (rentalId=" + rentalId + ")";
+        depositService.transferUserToOrganization(loginUser.id(), uo.o, amount, memo);
+        // 보증금 이체 API 로직 끝
 
         var approved = domain.approveReservation(uo.u, uo.o, rentalId, loginUser.id());
         return new RentalDtos.ApproveResponse(

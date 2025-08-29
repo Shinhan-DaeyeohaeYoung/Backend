@@ -29,5 +29,4 @@ public interface ReturnRequestRepository extends JpaRepository<ReturnRequest, Lo
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select rr from ReturnRequest rr where rr.id = :id and rr.universityId = :u and rr.organizationId = :o")
     Optional<ReturnRequest> lockByIdAndTenant(@Param("id") Long id, @Param("u") Long universityId, @Param("o") Long organizationId);
-
 }
