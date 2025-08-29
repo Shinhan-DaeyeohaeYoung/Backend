@@ -25,8 +25,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static java.util.stream.Collectors.toList;
-
 @Service
 @RequiredArgsConstructor
 public class RentalApplicationService {
@@ -71,7 +69,6 @@ public class RentalApplicationService {
 
     /** itemId가 속한 (u,o)를 내 멤버십으로 해석 (없으면 404) */
     private Item resolveItemAccessible(LoginUser loginUser, Long itemId) {
-        // 사용자 멤버십(org→univ) 맵
         var orgMap = organizationService.getMyOrganizations(loginUser, "")
                 .stream()
                 .collect(Collectors.toMap(
@@ -92,11 +89,9 @@ public class RentalApplicationService {
                 "Item not found in your memberships");
     }
 
-    /** rentalId의 (u,o) 가져오기 (엔티티에서 읽음) */
+    /** rentalId의 (u,o) 가져오기 */
     private UO resolveRentalUO(Long rentalId) {
-        // NOTE: Rental 엔티티 접근 메서드는 프로젝트에 맞게 사용하세요.
-        // 여기서는 읽기 전용으로 가져온다고 가정.
-        Rental r = domain.getById(rentalId); // ← 도메인에 조회 메서드가 있어야 합니다.
+        Rental r = domain.getById(rentalId);
         if (r == null) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.NOT_FOUND, "Rental not found");
@@ -105,6 +100,22 @@ public class RentalApplicationService {
     }
 
     private record UO(Long u, Long o) {}
+
+    /** ✅ unitId 기준 대표 사진 key 조회 */
+    private String resolveUnitPhotoKey(Long u, Long o, Long itemId, Long unitId) {
+        if (u == null || o == null || itemId == null || unitId == null) return null;
+        return unitPhotoDomainService.listItemUnitPhotos(u, o, itemId).stream()
+                .filter(p -> p.getUnit() != null && Objects.equals(p.getUnit().getId(), unitId))
+                .map(UnitPhoto::getImageKey)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /** ✅ key → presigned URL */
+    private String toPresignedUrl(String key) {
+        return (key == null || key.isBlank()) ? null : imageInfraService.getDownloadPresignedUrl(key);
+    }
 
     /* ===================== 예약/조회 API ===================== */
 
@@ -125,18 +136,25 @@ public class RentalApplicationService {
         return domain.listMyActiveReservations(u, loginUser.id(), pageable);
     }
 
-    /** 내 예약(요약 DTO) */
+    /** 내 예약(요약 DTO) – ✅ unit 이미지 URL 포함 */
     public Page<RentalDtos.ReservationSummary> listMyReservations(LoginUser loginUser, Pageable pageable) {
         Long u = loginUser.universityId();
         return domain.listMyActiveReservations(u, loginUser.id(), pageable)
-                .map(r -> new RentalDtos.ReservationSummary(
-                        r.getId(),
-                        r.getItem().getId(),
-                        r.getUnit().getId(),
-                        r.getStatus().name(),
-                        r.getReservedAt() == null ? null : r.getReservedAt().format(F),
-                        r.getReserveExpiresAt() == null ? null : r.getReserveExpiresAt().format(F)
-                ));
+                .map(r -> {
+                    Long unitId = (r.getUnit() != null ? r.getUnit().getId() : null);
+                    Long itemId = (r.getItem() != null ? r.getItem().getId() : null);
+                    String key = resolveUnitPhotoKey(r.getUniversityId(), r.getOrganizationId(), itemId, unitId);
+                    String url = toPresignedUrl(key);
+                    return new RentalDtos.ReservationSummary(
+                            r.getId(),
+                            (r.getItem() != null ? r.getItem().getId() : null),
+                            unitId,
+                            r.getStatus().name(),
+                            r.getReservedAt() == null ? null : r.getReservedAt().format(F),
+                            r.getReserveExpiresAt() == null ? null : r.getReserveExpiresAt().format(F),
+                            url
+                    );
+                });
     }
 
     public RentalDtos.ApproveResponse approve(LoginUser loginUser, Long rentalId) {
@@ -158,7 +176,7 @@ public class RentalApplicationService {
         );
     }
 
-    /** 취소: rentalId의 (u,o) 확인 후 취소 (도메인에서 본인/관리자 권한 판정) */
+    /** 취소: rentalId의 (u,o) 확인 후 취소 */
     public void cancel(LoginUser loginUser, Long rentalId) {
         UO uo = resolveRentalUO(rentalId);
         domain.cancelReservation(uo.u, uo.o, rentalId, loginUser.id());
@@ -170,7 +188,7 @@ public class RentalApplicationService {
         return domain.isRentalPossible(uo.u, uo.o, rentalId, loginUser.id());
     }
 
-    /** 내 대여/예약 히스토리 */
+    /** 내 대여/예약 히스토리 – ✅ unit 이미지 URL 포함 */
     public Page<RentalDtos.RentalHistoryItem> listMyRentalHistory(
             LoginUser loginUser,
             String statusCsv,
@@ -196,17 +214,23 @@ public class RentalApplicationService {
                     && r.getReserveExpiresAt() != null
                     && r.getReserveExpiresAt().isBefore(now);
 
+            Long unitId = (r.getUnit() != null ? r.getUnit().getId() : null);
+            Long itemId = (r.getItem() != null ? r.getItem().getId() : null);
+            String key = resolveUnitPhotoKey(r.getUniversityId(), r.getOrganizationId(), itemId, unitId);
+            String url = toPresignedUrl(key);
+
             return new RentalDtos.RentalHistoryItem(
                     r.getId(),
                     r.getStatus().name(),
-                    r.getItem() != null ? r.getItem().getId() : null,
-                    r.getUnit() != null ? r.getUnit().getId() : null,
+                    (r.getItem() != null ? r.getItem().getId() : null),
+                    unitId,
                     r.getReservedAt() == null ? null : r.getReservedAt().format(F),
                     r.getReserveExpiresAt() == null ? null : r.getReserveExpiresAt().format(F),
                     r.getRentedAt() == null ? null : r.getRentedAt().format(F),
                     r.getDueAt() == null ? null : r.getDueAt().format(F),
                     r.getReturnedAt() == null ? null : r.getReturnedAt().format(F),
-                    expired
+                    expired,
+                    url
             );
         });
     }
@@ -232,33 +256,40 @@ public class RentalApplicationService {
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), safe);
     }
 
-    /** 내 대여중 전체 */
+    /** 내 대여중 전체 – ✅ unit 이미지 URL 포함 */
     public Page<RentalDtos.CurrentRentalItem> listMyCurrentRentals(LoginUser loginUser, Pageable pageable) {
         Long u = loginUser.universityId();
         Pageable safe = sanitizeSort(pageable, "rentedAt");
 
         Page<Rental> page = domain.listMyCurrentRentals(u, loginUser.id(), safe);
-        return page.map(r -> new RentalDtos.CurrentRentalItem(
-                r.getId(),
-                r.getUniversityId(),
-                r.getOrganizationId(),
-                r.getUserId(),
-                r.getItem() != null ? r.getItem().getId() : null,
-                r.getUnit() != null ? r.getUnit().getId() : null,
-                r.getQuantity(),
-                r.getRentedAt() == null ? null : r.getRentedAt().format(F),
-                r.getDueAt() == null ? null : r.getDueAt().format(F),
-                r.getReturnedAt() == null ? null : r.getReturnedAt().format(F),
-                r.getStatus().name(),
-                null /* depositId 등 필요시 추가 */
-        ));
+        return page.map(r -> {
+            Long unitId = (r.getUnit() != null ? r.getUnit().getId() : null);
+            Long itemId = (r.getItem() != null ? r.getItem().getId() : null);
+            String key = resolveUnitPhotoKey(r.getUniversityId(), r.getOrganizationId(), itemId, unitId);
+            String url = toPresignedUrl(key);
+
+            return new RentalDtos.CurrentRentalItem(
+                    r.getId(),
+                    r.getUniversityId(),
+                    r.getOrganizationId(),
+                    r.getUserId(),
+                    (r.getItem() != null ? r.getItem().getId() : null),
+                    unitId,
+                    r.getQuantity(),
+                    r.getRentedAt() == null ? null : r.getRentedAt().format(F),
+                    r.getDueAt() == null ? null : r.getDueAt().format(F),
+                    r.getReturnedAt() == null ? null : r.getReturnedAt().format(F),
+                    r.getStatus().name(),
+                    null,      // depositId 필요시 채우기
+                    url
+            );
+        });
     }
 
-    /** 조직별 내 대여중 (조직 멤버십 확인) */
+    /** 조직별 내 대여중 – ✅ unit 이미지 URL 포함 */
     public Page<RentalDtos.CurrentRentalItem> listMyCurrentRentalsByOrganization(
             LoginUser loginUser, Long organizationId, Pageable pageable
     ) {
-        // 내가 그 조직 멤버인지 확인
         if (!myOrgIds(loginUser).contains(organizationId)) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.FORBIDDEN, "No membership for organizationId=" + organizationId);
@@ -268,33 +299,44 @@ public class RentalApplicationService {
         Pageable safe = sanitizeSort(pageable, "rentedAt");
 
         Page<Rental> page = domain.listMyCurrentRentalsByOrganization(u, organizationId, loginUser.id(), safe);
-        return page.map(r -> new RentalDtos.CurrentRentalItem(
-                r.getId(),
-                r.getUniversityId(),
-                r.getOrganizationId(),
-                r.getUserId(),
-                r.getItem() != null ? r.getItem().getId() : null,
-                r.getUnit() != null ? r.getUnit().getId() : null,
-                r.getQuantity(),
-                r.getRentedAt() == null ? null : r.getRentedAt().format(F),
-                r.getDueAt() == null ? null : r.getDueAt().format(F),
-                r.getReturnedAt() == null ? null : r.getReturnedAt().format(F),
-                r.getStatus().name(),
-                null
-        ));
+        return page.map(r -> {
+            Long unitId = (r.getUnit() != null ? r.getUnit().getId() : null);
+            Long itemId = (r.getItem() != null ? r.getItem().getId() : null);
+            String key = resolveUnitPhotoKey(r.getUniversityId(), r.getOrganizationId(), itemId, unitId);
+            String url = toPresignedUrl(key);
+
+            return new RentalDtos.CurrentRentalItem(
+                    r.getId(),
+                    r.getUniversityId(),
+                    r.getOrganizationId(),
+                    r.getUserId(),
+                    (r.getItem() != null ? r.getItem().getId() : null),
+                    unitId,
+                    r.getQuantity(),
+                    r.getRentedAt() == null ? null : r.getRentedAt().format(F),
+                    r.getDueAt() == null ? null : r.getDueAt().format(F),
+                    r.getReturnedAt() == null ? null : r.getReturnedAt().format(F),
+                    r.getStatus().name(),
+                    null,
+                    url   // ✅ unitImageUrl
+            );
+        });
     }
 
-    // RentalApplicationService 내부 유틸
+    // UnitReservationDetail: 이미 photos 리스트에 URL 포함
     private List<ItemDtos.UnitPhotoSummary> toPhotoSummaries(List<UnitPhoto> photos) {
         return photos.stream()
-                .map(p -> new ItemDtos.UnitPhotoSummary(
-                        p.getUnit() != null ? p.getUnit().getAssetNo() : null, // assetNo
-                        p.getImageKey(),                                       // key
-                        imageInfraService.getDownloadPresignedUrl(p.getImageKey()) // imageUrl
-                ))
+                .map(p -> {
+                    String key = p.getImageKey();
+                    String url = (key == null) ? null : imageInfraService.getDownloadPresignedUrl(key);
+                    return new ItemDtos.UnitPhotoSummary(
+                            p.getUnit() != null ? p.getUnit().getAssetNo() : null, // assetNo
+                            key,                                                    // key
+                            url                                                     // imageUrl
+                    );
+                })
                 .toList();
     }
-
 
     public List<RentalDtos.UnitReservationDetail> listMyReservationsByOrganization(
             LoginUser loginUser, Long organizationId, Pageable pageable
@@ -302,7 +344,6 @@ public class RentalApplicationService {
         Long u = loginUser.universityId();
         Long userId = loginUser.id();
 
-        // RESERVED & 미만료
         List<Rental> rentals = domain.listMyActiveReservationsByOrganizationRaw(u, organizationId, userId);
 
         List<RentalDtos.UnitReservationDetail> result = new ArrayList<>(rentals.size());
@@ -315,8 +356,6 @@ public class RentalApplicationService {
             var itemId = (r.getItem() != null ? r.getItem().getId() : null);
             var itemDescription = (item != null ? item.getDescription() : null);
 
-
-            // 사진: 아이템 단위 목록을 받아와서 unitId로 필터링
             List<UnitPhoto> photoEntities = (itemId == null)
                     ? List.of()
                     : unitPhotoDomainService.listItemUnitPhotos(
@@ -351,7 +390,7 @@ public class RentalApplicationService {
                 .filter(s -> !s.isEmpty())
                 .map(String::toUpperCase)
                 .map(RentalStatus::valueOf)
-                .collect(Collectors.toCollection(() -> EnumSet.noneOf(RentalStatus.class)));
+                .collect(() -> EnumSet.noneOf(RentalStatus.class), EnumSet::add, EnumSet::addAll);
     }
 
     private LocalDateTime parseDateTime(String iso) {

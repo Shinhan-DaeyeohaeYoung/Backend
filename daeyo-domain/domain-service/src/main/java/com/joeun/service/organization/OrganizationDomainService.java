@@ -102,4 +102,7 @@ public class OrganizationDomainService {
     return orgApiCredentialRepository.save(cred);
   }
 
+  public List<Long> findAllOrganizationIds() {
+      return organizationRepository.findAllOrganizationIds();
+  }
 }

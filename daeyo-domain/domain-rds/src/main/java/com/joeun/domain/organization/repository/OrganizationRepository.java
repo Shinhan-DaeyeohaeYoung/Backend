@@ -21,4 +21,10 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
         () -> new jakarta.persistence.EntityNotFoundException("organization not found: " + id)
     );
   }
+           
+    @Query("""
+    select o.id
+        from Organization o
+    """)
+    List<Long> findAllOrganizationIds();
 }

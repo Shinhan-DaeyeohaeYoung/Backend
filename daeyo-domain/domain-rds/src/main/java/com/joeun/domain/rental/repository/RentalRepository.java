@@ -1,6 +1,7 @@
 package com.joeun.domain.rental.repository;
 
 import com.joeun.domain.rental.dto.ExpiredRentalRow;
+import com.joeun.domain.rental.dto.RentalCountProjection;
 import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.rental.entity.RentalStatus;
 import jakarta.persistence.LockModeType;
@@ -109,4 +110,28 @@ public interface RentalRepository extends JpaRepository<Rental, Long>,JpaSpecifi
     );
     @Query("select r.unit.id from Rental r where r.id = :rentalId")
     Optional<Long> findUnitIdByRentalId(@Param("rentalId") Long rentalId);
+
+    @Query("""
+    select i.id as itemId,
+           i.name as itemName,
+           r.organizationId as organizationId,
+           count(r.id) as rentalCount,
+           sum(case when r.status = com.joeun.domain.rental.entity.RentalStatus.OVERDUE then 1 else 0 end) as overdueCount
+      from Rental r
+      join r.item i
+     where r.organizationId between :fromId and :toId
+       and r.rentedAt >= :start and r.rentedAt < :end
+       and r.status in (
+         com.joeun.domain.rental.entity.RentalStatus.RENTED,
+         com.joeun.domain.rental.entity.RentalStatus.RETURNED,
+         com.joeun.domain.rental.entity.RentalStatus.OVERDUE
+       )
+     group by i.id, i.name, r.organizationId
+""")
+    List<RentalCountProjection> batchCountByOrganizationIdBetweenAndRentedAtBetween(
+            @Param("fromId") Long fromId,
+            @Param("toId") Long toId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end
+    );
 }

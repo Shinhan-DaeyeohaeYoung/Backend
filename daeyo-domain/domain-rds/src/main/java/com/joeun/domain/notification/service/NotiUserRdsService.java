@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -34,7 +35,7 @@ public class NotiUserRdsService {
     @Transactional(readOnly = true)
     public NotiUser findNotiUserByUserId(Long userId) {
         return notiUserRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("NotiUser not found with userId: " + userId));
+                .orElseThrow(() -> new IllegalArgumentException("NotiUser not found for userId: " + userId));
     }
 
     @Transactional
