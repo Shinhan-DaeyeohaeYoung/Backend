@@ -24,6 +24,15 @@ public class UnitPhotoDomainService {
     private final IndividualItemRepository unitRepository;
     private final UnitPhotoRepository photoRepository;
 
+    @Transactional(readOnly = true)
+    public String getUnitPhotoKey(Long unitId, Long u, Long o) {
+        return photoRepository
+                .findByUnit_IdAndUniversityIdAndOrganizationId(unitId, u, o)
+                .or(() -> photoRepository.findByUnit_Id(unitId)) // 테넌트 없는 과거 레코드 호환
+                .map(UnitPhoto::getImageKey)
+                .orElse(null);
+    }
+
     private Item getItemOrThrow(Long u, Long o, Long itemId) {
         return itemRepository.findByIdAndUniversityIdAndOrganizationId(itemId, u, o)
                 .orElseThrow(() -> new NoSuchElementException(

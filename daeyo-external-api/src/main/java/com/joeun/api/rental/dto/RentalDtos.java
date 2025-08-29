@@ -15,7 +15,8 @@ public final class RentalDtos {
             Long unitId,
             String status,
             String reservedAt,
-            String reserveExpiresAt
+            String reserveExpiresAt,
+            String unitImageUrl
     ) {}
 
     public record ApproveResponse(Long id, String status, String dueAt) {}
@@ -29,7 +30,8 @@ public final class RentalDtos {
             String rentedAt,
             String dueAt,
             String returnedAt,
-            boolean expired         // RESERVED였으나 TTL 만료되었으면 true
+            boolean expired,         // RESERVED였으나 TTL 만료되었으면 true
+            String unitImageUrl
     ) {}
     public static record CurrentRentalItem(
             Long id,
@@ -43,7 +45,8 @@ public final class RentalDtos {
             String dueAt,
             String returnedAt,
             String status,
-            Long depositId
+            Long depositId,
+            String unitImageUrl
     ) {}
     public record UnitReservationDetail(
             Long rentalId,
