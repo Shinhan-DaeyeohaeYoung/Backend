@@ -1,5 +1,6 @@
 package com.joeun.api.statistics.controller;
 
+import com.joeun.api.statistics.api.StatisticsApi;
 import com.joeun.api.statistics.dto.ItemRentalCountResponse;
 import com.joeun.api.statistics.service.StatisticsService;
 import com.joeun.scheduler.DailyItemRentalCountScheduler;
@@ -16,7 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping("api/v1/statistics")
 @Validated
-public class StatisticsController {
+public class StatisticsController implements StatisticsApi {
 
     private final DailyItemRentalCountScheduler dailyItemRentalCountScheduler;
     private final StatisticsService statisticsService;
