@@ -127,7 +127,7 @@ IMAGE_THRESHOLD_AGENT_URL=${IMAGE_THRESHOLD_AGENT_URL}
 |                              신승용                               |                           윤규성                            |                          이지혜                          |
 |:--------------------------------------------------------------:|:--------------------------------------------------------:|:-----------------------------------------------------:|
 | <img src="https://github.com/sso9594.png" width="70%" alt=""/> | <img src="https://github.com/kyusung22.png" width="70%"> | <img src="https://github.com/Jihye511.png" width=70%> |
-|                             BE, 팀장                             |                            FE                            |                          FE                           |
+|                             BE, 팀장                             |                            BE                            |                          BE                           |
 |           대여, 예약, 대기열, 알림 도메인 구현, 인프라 구축, 배치 시스템 구축            |           유저, 보증금, 금융망 API, 조직, 학교 포인트 도메인 구현            |            대여, 반납, 물품, Open AI, QR 도메인 구현             |
 
 |                           길태은                            |                            안수진                             |                                              
