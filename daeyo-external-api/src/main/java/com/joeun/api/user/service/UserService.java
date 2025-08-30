@@ -27,6 +27,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -51,6 +53,10 @@ public class UserService {
   private final SsafyMemberClient ssafyMemberClient;
   private final SsafyDemandDepositClient ssafyDemandDepositClient;
 
+  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+  private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
+  private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HHmmss");
+  private static final DateTimeFormatter TS_FMT   = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
   @Value("${ssafy.api-key}")
   private String ssafyAdminApiKey;
@@ -182,16 +188,19 @@ public class UserService {
     }
     String accountNoPlain = accountCipher.decrypt(enc);
     // 4) 외부 API 호출 요청 빌드
+    ZonedDateTime nowKst = ZonedDateTime.now(KST);
+    String date = nowKst.format(DATE_FMT);
+    String time = nowKst.format(TIME_FMT);
+    String idem = nowKst.format(TS_FMT) + ThreadLocalRandom.current().nextInt(100000, 999999);
+
     AccountApiHeader header = AccountApiHeader.builder()
         .apiName("inquireDemandDepositAccountBalance")
-        .transmissionDate(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")))
-        .transmissionTime(LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss")))
+        .transmissionDate(date)               // KST 날짜
+        .transmissionTime(time)               // KST 시간
         .institutionCode("00100")
         .fintechAppNo("001")
         .apiServiceCode("inquireDemandDepositAccountBalance")
-        .institutionTransactionUniqueNo(
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-                + ThreadLocalRandom.current().nextInt(100000, 999999))
+        .institutionTransactionUniqueNo(idem) // 동일 now 기반 멱등키
         .apiKey(ssafyAdminApiKey)
         .userKey(userKey)
         .build();

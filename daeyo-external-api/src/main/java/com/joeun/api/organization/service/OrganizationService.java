@@ -17,6 +17,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -34,6 +36,11 @@ public class OrganizationService {
   private final OrganizationDomainService organizationDomainService;
   private final UserDomainService userDomainService;
   private final SsafyDemandDepositClient ssafyDemandDepositClient;
+
+  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+  private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
+  private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HHmmss");
+  private static final DateTimeFormatter TS_FMT   = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
   @Value("${ssafy.api-key}")
   private String ssafyAdminApiKey;
@@ -132,19 +139,20 @@ public class OrganizationService {
 
     // 2) org userKey 조회
     String userKey = organizationDomainService.getOrgUserKeyOrThrow(orgId);
+    ZonedDateTime nowKst = ZonedDateTime.now(KST);
+    String date = nowKst.format(DATE_FMT);
+    String time = nowKst.format(TIME_FMT);
+    String idem = nowKst.format(TS_FMT) + ThreadLocalRandom.current().nextInt(100000, 999999);
 
-    // 3) 외부 잔액 조회 호출
     var header = AccountApiHeader.builder()
         .apiName("inquireDemandDepositAccountBalance")
-        .transmissionDate(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")))
-        .transmissionTime(LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss")))
+        .transmissionDate(date)          // KST
+        .transmissionTime(time)          // KST
         .institutionCode("00100")
         .fintechAppNo("001")
         .apiServiceCode("inquireDemandDepositAccountBalance")
-        .institutionTransactionUniqueNo(
-            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-                + ThreadLocalRandom.current().nextInt(100000, 999999))
-        .apiKey(ssafyAdminApiKey)
+        .institutionTransactionUniqueNo(idem)
+        .apiKey(ssafyAdminApiKey != null ? ssafyAdminApiKey.trim() : null) // 공백/개행 방지
         .userKey(userKey)
         .build();
 
