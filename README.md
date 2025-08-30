@@ -123,17 +123,17 @@ IMAGE_THRESHOLD_AGENT_URL=${IMAGE_THRESHOLD_AGENT_URL}
 ---
 
 ## 👏 팀원 및 팀 소개
-|                                      신승용                                      |                                      윤규성                                      |                          이지혜                           |
-|:-----------------------------------------------------------------------------:|:-----------------------------------------------------------------------------:|:------------------------------------------------------:|
-|        <img src="https://github.com/sso9594.png" width="70%" alt=""/>         |            <img src="https://github.com/kyusung22.png" width="70%">            | <img src="https://github.com/Jihye511.png" width=70%>  |
-|                                    BE, 팀장                                     |                                      FE                                       |                           FE                           |
-| UI/UX, Figma 디자인 <br>앱 초기 구조 설정<br>앱 공통 컴포넌트 작성<br>모니터링(WebRTC)<br>앱 배포 푸시 알림 | UI/UX, Figma 디자인<br>웹 라우팅 설정<br>웹 공통 컴포넌트 작성<br>웹앱 배포<br>아기 프로필 선택<br>기록 및 통계 | Figma 디자인<br>마이 프로필<br>회원/비회원 관리<br>육아 가이드<br>일기<br>졸업 |
+|                              신승용                               |                           윤규성                            |                          이지혜                          |
+|:--------------------------------------------------------------:|:--------------------------------------------------------:|:-----------------------------------------------------:|
+| <img src="https://github.com/sso9594.png" width="70%" alt=""/> | <img src="https://github.com/kyusung22.png" width="70%"> | <img src="https://github.com/Jihye511.png" width=70%> |
+|                             BE, 팀장                             |                            FE                            |                          FE                           |
+|           대여, 예약, 대기열, 알림 도메인 구현, 인프라 구축, 배치 시스템 구축            |           유저, 보증금, 금융망 API, 조직, 학교 포인트 도메인 구현            |            대여, 반납, 물품, Open AI, QR 도메인 구현             |
 
-|                           길태은                           |                            안수진                            |                                              
-|:-------------------------------------------------------:|:---------------------------------------------------------:|
+|                           길태은                            |                            안수진                             |                                              
+|:--------------------------------------------------------:|:----------------------------------------------------------:|
 | <img src="https://github.com/TaeeunKil.png" width="70%"> | <img src="https://github.com/bellecode20.png" width="70%"> |                                              
-|                           FE                            |                            FE                             |                                              
-|     Webrtc 모니터링<br>실시간 알림 기능<br>프레임 추출<br>CI/CD 작업      |           육아 기록<br>육아 일일,주간 통계<br>육아 졸업<br>배치작업           | 
+|                            FE                            |                             FE                             |                                              
+|        관리자 사이드 대여-반납 흐름, PWA 세팅, 전역 상태관리(모달, 사용자)        |            유저 사이드 대여-반납 흐름, 페이지 레이아웃 및 공통 컴포넌트             | 
 
 ---
 
@@ -145,11 +145,14 @@ IMAGE_THRESHOLD_AGENT_URL=${IMAGE_THRESHOLD_AGENT_URL}
 ![Java](https://img.shields.io/badge/Java-17-007396?logo=java&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?logo=springboot&logoColor=white)
 ![JPA](https://img.shields.io/badge/JPA-ORM-blue)
+![Spring Security](https://img.shields.io/badge/Spring%20Security-Security-6DB33F?logo=springsecurity&logoColor=white)
+![Spring Batch](https://img.shields.io/badge/Spring%20Batch-Batch-6DB33F?logo=springboot&logoColor=white)
+![Gradle](https://img.shields.io/badge/Gradle-7.x-02303A?logo=gradle&logoColor=white)
 
 ### Frontend
-![Vue.js](https://img.shields.io/badge/Vue.js-3-4FC08D?logo=vue.js&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-BuildTool-646CFF?logo=vite&logoColor=white)
-![TailwindCSS](https://img.shields.io/badge/TailwindCSS-CSS-38B2AC?logo=tailwind-css&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-4.9-3178C6?logo=typescript&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-ES6-F7DF1E?logo=javascript&logoColor=black)
 
 ### Database
 ![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)
@@ -158,13 +161,10 @@ IMAGE_THRESHOLD_AGENT_URL=${IMAGE_THRESHOLD_AGENT_URL}
 ### Infra & DevOps
 ![AWS](https://img.shields.io/badge/AWS-Cloud-F90?logo=amazon-aws&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker&logoColor=white)
-![Jenkins](https://img.shields.io/badge/Jenkins-CI/CD-D24939?logo=jenkins&logoColor=white)
-![Kubernetes](https://img.shields.io/badge/Kubernetes-Orchestration-326CE5?logo=kubernetes&logoColor=white)
 
 ### Tools
 ![Git](https://img.shields.io/badge/Git-VersionControl-F05032?logo=git&logoColor=white)
 ![Swagger](https://img.shields.io/badge/Swagger-API-85EA2D?logo=swagger&logoColor=white)
-![Jira](https://img.shields.io/badge/Jira-Agile-0052CC?logo=jira&logoColor=white)
 ![Notion](https://img.shields.io/badge/Notion-Docs-000000?logo=notion&logoColor=white)
 
 
