@@ -1,15 +1,69 @@
 version: '3.8'
 
 services:
+  daeyo-app:
+    image: sso9594/daeyo-app:latest
+    container_name: daeyo-app
+    ports:
+      - "8082:8082"
+    depends_on:
+      - daeyo-mysql
+    environment:
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ACCESS_TOKEN_VALIDITY_SECONDS=${JWT_ACCESS_TOKEN_VALIDITY_SECONDS}
+      - JWT_REFRESH_TOKEN_VALIDITY_SECONDS=${JWT_REFRESH_TOKEN_VALIDITY_SECONDS}
+      - CRYPTO_KEY_BASE64=${CRYPTO_KEY_BASE64}
+      - DB_USER=${MYSQL_USER}
+      - DB_PASSWORD=${MYSQL_PW}
+      - DB_HOST=daeyo-mysql
+      - DB_PORT=3306
+      - DB_SOURCE=${MYSQL_DB}
+      - REDIS_HOST=daeyo-redis
+      - REDIS_PORT=6379
+      - QR_SCHEME=${QR_SCHEME}
+      - QR_SIZE=${QR_SIZE}
+      - QR_SCAN_URL=${QR_SCAN_URL}
+      - QR_JWT_SECRET=${QR_JWT_SECRET}
+      - QR_JWT_DEFAULT_TTL=${QR_JWT_DEFAULT_TTL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL}
+    networks:
+      - daeyo-network
+
+  daeyo-ai:
+    image: sso9594/daeyo-ai:latest   # 푸시한 태그(:api 또는 :latest)로 맞춰줘
+    container_name: daeyo-ai
+    environment:
+      # S3 사용 시 필요한 값들(.env에 넣어두면 편함)
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      # 선택: 기본 버킷/가중치
+      - S3_BUCKET=${AWS_S3_BUCKET_NAME}
+      # - YOLO_WEIGHTS=/weights/yolov8n-seg.pt  # 이미지에 포함했으면 지정, 아니면 생략
+    ports:
+      - "8000:8000"  # 외부에서 접근 필요 없으면 생략
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   daeyo-mysql:
     image: mysql:latest
     container_name: daeyo-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PW}
-      MYSQL_DATABASE: ${MYSQL_DB}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PW}
-      TZ: ${MYSQL_TZ}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PW}
+      - MYSQL_DATABASE=${MYSQL_DB}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PW}
+      - TZ=${MYSQL_TZ}
     command: [
       "--character-set-server=utf8mb4",
       "--secure-file-priv=/docker-entrypoint-initdb.d/dummy"
