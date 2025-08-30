@@ -32,6 +32,9 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -65,6 +68,8 @@ public class DepositService {
   @Value("${ssafy.api-key}")
   private String ssafyAdminApiKey;
 
+  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+  private static final ZoneId Z = ZoneId.of("Asia/Seoul");
   private static final DateTimeFormatter D = DateTimeFormatter.ofPattern("yyyyMMdd");
   private static final DateTimeFormatter T = DateTimeFormatter.ofPattern("HHmmss");
   private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
@@ -219,8 +224,8 @@ public class DepositService {
     String depositAccountNo = orgAcc.getAccountNo();
 
     // 4) SSAFY 헤더/요청 구성
-    String today = LocalDate.now().format(D);
-    String now   = LocalTime.now().format(T);
+    String today = LocalDate.now(Z).format(D);
+    String now   = LocalTime.now(Z).format(T);
     String idem  = LocalDateTime.now().format(TS) + ThreadLocalRandom.current().nextInt(100000, 999999);
     String amountStr = amount.setScale(0, RoundingMode.DOWN).toPlainString(); // 원단위 정수 문자열
 
@@ -282,22 +287,22 @@ public class DepositService {
     }
     String depositAccountNo = accountCipher.decrypt(enc); // 사용자 입금
 
-    // 3) 헤더/요청
-    String today = LocalDate.now().format(D);
-    String now   = LocalTime.now().format(T);
-    String idem  = LocalDateTime.now().format(TS) + ThreadLocalRandom.current().nextInt(100000, 999999);
+    ZonedDateTime nowKst = ZonedDateTime.now(KST);
+    String today = nowKst.format(D);
+    String time  = nowKst.format(T);
+    String idem  = nowKst.format(TS) + ThreadLocalRandom.current().nextInt(100000, 999999);
     String amountStr = amount.setScale(0, RoundingMode.DOWN).toPlainString();
 
     AccountApiHeader header = AccountApiHeader.builder()
         .apiName("updateDemandDepositAccountTransfer")
-        .transmissionDate(today)
-        .transmissionTime(now)
+        .transmissionDate(today)     // KST 날짜
+        .transmissionTime(time)      // KST 시간
         .institutionCode("00100")
         .fintechAppNo("001")
         .apiServiceCode("updateDemandDepositAccountTransfer")
         .institutionTransactionUniqueNo(idem)
         .apiKey(ssafyAdminApiKey)
-        .userKey(orgUserKey) // ✅ 출금 주체는 "조직"
+        .userKey(orgUserKey)         // 출금 주체 = 조직
         .build();
 
     UpdateDemandDepositAccountTransferRequest req = UpdateDemandDepositAccountTransferRequest.builder()

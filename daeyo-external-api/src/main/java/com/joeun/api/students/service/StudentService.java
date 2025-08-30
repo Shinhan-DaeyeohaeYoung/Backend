@@ -25,6 +25,8 @@ import com.joeun.service.user.UserDomainService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -51,6 +53,11 @@ public class StudentService {
   private final SsafyMemberClient ssafyMemberClient;
   private final SsafyDemandDepositClient ssafyDemandDepositClient;
   private final UserDomainService userCredentialDomainService;
+
+  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+  private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
+  private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HHmmss");
+  private static final DateTimeFormatter TS_FMT   = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
   @Value("${ssafy.api-key}")
   private String ssafyMemberAdminApiKey;
@@ -164,20 +171,23 @@ public class StudentService {
     try {
       // 제품코드는 설정값을 권장 (ex. application.yml: ssafy.accountTypeUniqueNo)
       String productNo = ssafyAccountTypeUniqueNo; // @Value 주입 또는 설정 빈
+      ZonedDateTime nowKst = ZonedDateTime.now(KST);
+      String date = nowKst.format(DATE_FMT);
+      String time = nowKst.format(TIME_FMT);
+      String idem = nowKst.format(TS_FMT) + ThreadLocalRandom.current().nextInt(100000, 999999);
+
       var accRes = ssafyDemandDepositClient.createDemandDepositAccount(
           CreateDemandDepositAccountRequest.builder()
               .header(AccountApiHeader.builder()
                   .apiName("createDemandDepositAccount")
-                  .transmissionDate(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")))
-                  .transmissionTime(LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss")))
+                  .transmissionDate(date)               // KST 날짜
+                  .transmissionTime(time)               // KST 시간
                   .institutionCode("00100")
                   .fintechAppNo("001")
                   .apiServiceCode("createDemandDepositAccount")
-                  .institutionTransactionUniqueNo(
-                      LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-                          + ThreadLocalRandom.current().nextInt(100000, 999999))
+                  .institutionTransactionUniqueNo(idem) // 동일 now 기반 멱등키
                   .apiKey(ssafyMemberAdminApiKey)
-                  .userKey(mRes.getUserKey()) // ✅ 필수
+                  .userKey(mRes.getUserKey())           // ✅ 필수
                   .build())
               .accountTypeUniqueNo(productNo)
               .build()
@@ -222,21 +232,20 @@ public class StudentService {
           );
 
       try {
-        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String now   = LocalTime.now().format(DateTimeFormatter.ofPattern("HHmmss"));
-        String idem  = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-            + ThreadLocalRandom.current().nextInt(100000, 999999);
+
+        // 키에 공백/개행 붙는 사고 방지
+        String apiKey = ssafyMemberAdminApiKey.trim();
 
         var depositHeader = AccountApiHeader.builder()
             .apiName("updateDemandDepositAccountDeposit")
-            .transmissionDate(today)
-            .transmissionTime(now)
+            .transmissionDate(date)           // KST 날짜
+            .transmissionTime(time)            // KST 시간
             .institutionCode("00100")
             .fintechAppNo("001")
             .apiServiceCode("updateDemandDepositAccountDeposit")
             .institutionTransactionUniqueNo(idem)
-            .apiKey(ssafyMemberAdminApiKey)   // ← 관리자 키
-            .userKey(mRes.getUserKey())       // ← 방금 받은 사용자 userKey
+            .apiKey(apiKey)                    // 관리자 키
+            .userKey(mRes.getUserKey())        // 방금 받은 사용자 userKey
             .build();
 
         var depositReq = UpdateDemandDepositAccountDepositRequest.builder()
