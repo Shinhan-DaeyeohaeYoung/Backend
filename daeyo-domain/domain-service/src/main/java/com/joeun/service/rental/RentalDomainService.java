@@ -117,7 +117,7 @@ public class RentalDomainService {
 
 
     @Transactional(rollbackFor = Exception.class)
-    public Long reserveUnit(Long u, Long o, Long userId, Long itemId, Long unitId, int ttlMinutes) {
+    public Rental reserveUnit(Long u, Long o, Long userId, Long itemId, Long unitId, int ttlMinutes) {
 
         IndividualItem unit = unitRepository.findByIdAndTenant(u, o, unitId)
                 .orElseThrow(() -> new NoSuchElementException("unit not found"));
@@ -184,7 +184,7 @@ public class RentalDomainService {
                             .build()
             );
 
-            return rentalId;
+            return rental;
 
         } catch (Exception e) {
             try {

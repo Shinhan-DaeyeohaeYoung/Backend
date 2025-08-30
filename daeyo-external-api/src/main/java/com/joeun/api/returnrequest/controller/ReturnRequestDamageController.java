@@ -12,6 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+
 @RestController
 @RequiredArgsConstructor
 @SecurityRequirement(name = "Authorization")
@@ -23,11 +25,8 @@ public class ReturnRequestDamageController {
     private final FileUrlResolver fileUrlResolver;
 
     @GetMapping("/admin/return-requests/{id}/damage/suggestions")
-    public ResponseEntity<DamageSuggestionResult> suggestions(@PathVariable Long id) {
-        var keys = queryService.    getBeforeAfterKeys(id);
-        String beforeUrl = fileUrlResolver.toPublicUrl(keys.beforeKey());
-        String afterUrl  = fileUrlResolver.toPublicUrl(keys.afterKey());
-        var result = damageSvc.assess(beforeUrl, afterUrl);
+    public ResponseEntity<DamageSuggestionResult> suggestions(@PathVariable Long id) throws IOException {
+        var result = damageSvc.assess(id);
         return ResponseEntity.ok(result);
     }
 }

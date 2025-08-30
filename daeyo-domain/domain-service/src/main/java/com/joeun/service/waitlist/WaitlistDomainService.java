@@ -1,6 +1,7 @@
 package com.joeun.service.waitlist;
 
 import com.joeun.domain.notification.entity.NotiType;
+import com.joeun.domain.rental.entity.Rental;
 import com.joeun.domain.waitlist.entity.Waitlist;
 import com.joeun.domain.waitlist.entity.WaitlistStatus;
 import com.joeun.domain.waitlist.service.WaitlistRdsService;
@@ -72,7 +73,7 @@ public class WaitlistDomainService {
                         .userId(waitlist.getUser().getId())
                         .build());
 
-        Long rentalId = rentalDomainService.reserveUnit(
+        Rental rental = rentalDomainService.reserveUnit(
                 u, o, userId, itemId, unitId, 30
         );
 

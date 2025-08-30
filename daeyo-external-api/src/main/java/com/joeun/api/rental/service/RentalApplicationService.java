@@ -125,9 +125,9 @@ public class RentalApplicationService {
         Long u = item.getUniversityId(), o = item.getOrganizationId();
 
         int ttl = (req.ttlMinutes() == null || req.ttlMinutes() <= 0) ? 30 : req.ttlMinutes();
-        Long rentalId = domain.reserveUnit(u, o, loginUser.id(), req.itemId(), req.unitId(), ttl);
+        Rental rental = domain.reserveUnit(u, o, loginUser.id(), req.itemId(), req.unitId(), ttl);
 
-        return new ReserveResponse(rentalId, req.itemId(), req.unitId(), null, null, "RESERVED");
+        return new ReserveResponse(rental.getId(), req.itemId(), req.unitId(), rental.getReservedAt(), rental.getReserveExpiresAt(), "RESERVED");
     }
 
     /** 내 예약(간단 엔티티) */

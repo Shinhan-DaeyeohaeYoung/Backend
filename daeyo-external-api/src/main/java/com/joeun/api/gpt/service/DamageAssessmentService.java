@@ -1,6 +1,9 @@
 package com.joeun.api.gpt.service;
 
+import com.joeun.api.gpt.agent.ImageThresholdingAgent;
 import com.joeun.api.gpt.dto.DamageSuggestionResult;
+import com.joeun.service.returnrequest.ReturnRequestQueryService;
+import feign.Response;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -10,6 +13,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -21,19 +25,35 @@ public class DamageAssessmentService {
     private final ObjectMapper mapper = new ObjectMapper();
     private final WebClient openai; // baseUrl=https://api.openai.com, Auth 헤더 세팅된 빈
     private final ResourceLoader resourceLoader; // mock 경로 파일 읽을 때 사용(선택)
+    private final ReturnRequestQueryService queryService;
+    private final ImageThresholdingAgent imageAgent;
 
     private String toDataUrl(byte[] bytes, String mimeType) {
         String base64 = Base64.getEncoder().encodeToString(bytes);
         return "data:" + mimeType + ";base64," + base64;
     }
 
-    public DamageSuggestionResult assess(String beforeUrl, String afterUrl) {
-        // 1) mock URL이면 파일을 읽어 base64로
-        String beforeImg = toDataUrl(readBytes(beforeUrl), "image/jpeg");
-        String afterImg = toDataUrl(readBytes(afterUrl), "image/jpeg");
+    public DamageSuggestionResult assess(Long returnRequestId) throws IOException {
+        ReturnRequestQueryService.BeforeAfterKeys keys = queryService.getBeforeAfterKeys(returnRequestId);
 
-        // 2) Responses API 페이로드 구성 (이미지 2장 + 안내 텍스트)
-        // 2) Responses API 페이로드 구성 (이미지 2장 + JSON 스키마 응답 강제)
+        String beforeKey = keys.beforeKey();
+        String afterKey  = keys.afterKey();
+
+        Response beforeRes;
+        Response afterRes;
+
+        try {
+            beforeRes = imageAgent.fetchProcessedFromS3(beforeKey);
+            afterRes  = imageAgent.fetchProcessedFromS3(afterKey);
+        } catch (Exception e) {
+            throw new RuntimeException("Image processing failed: " + e.getMessage());
+        }
+
+        // 1) 바이트 → data URL
+        String beforeImgDataUrl = toDataUrl(beforeRes, "image/jpeg"); // 헤더에서 MIME 추정도 가능
+        String afterImgDataUrl  = toDataUrl(afterRes,  "image/jpeg");
+
+        // 2) Responses API 페이로드
         Map<String, Object> body = Map.of(
                 "model", "gpt-4.1-mini",
                 "input", List.of(Map.of(
@@ -44,10 +64,11 @@ public class DamageAssessmentService {
                                                 "설명은 한국어로. 파손율은 0~100 사이 숫자(소수 허용).\n" +
                                                 "{ \"detail\": \"상세 설명\", \"damageRate\": number, \"summary\": \"요약\" }"
                                 ),
-                                Map.of("type", "input_image", "image_url", beforeImg),
-                                Map.of("type", "input_image", "image_url", afterImg)
+                                Map.of("type", "input_image", "image_url", beforeImgDataUrl),
+                                Map.of("type", "input_image", "image_url", afterImgDataUrl)
                         )
                 )),
+                // 아래 포맷 섹션은 당신 코드 그대로 유지
                 "text", Map.of(
                         "format", Map.of(
                                 "type", "json_schema",
@@ -58,9 +79,9 @@ public class DamageAssessmentService {
                                         "additionalProperties", false,
                                         "required", List.of("detail", "damageRate", "summary"),
                                         "properties", Map.of(
-                                                "detail", Map.of("type", "string", "maxLength", 300, "description", "상세 설명"),
-                                                "damageRate", Map.of("type", "number", "minimum", 0, "maximum", 100, "description", "0~100"),
-                                                "summary", Map.of("type", "string", "maxLength", 150, "description", "한 줄 요약")
+                                                "detail", Map.of("type", "string", "maxLength", 300),
+                                                "damageRate", Map.of("type", "number", "minimum", 0, "maximum", 100),
+                                                "summary", Map.of("type", "string", "maxLength", 150)
                                         )
                                 )
                         )
@@ -78,8 +99,20 @@ public class DamageAssessmentService {
                 .bodyToMono(String.class)
                 .block();
 
-        // TODO: respJson 파싱해서 DamageSuggestionResult로 매핑
         return parse(respJson);
+    }
+
+    private static String toDataUrl(Response feignRes, String defaultMime) throws IOException {
+        // Content-Type 헤더에서 MIME 추정 (없으면 기본값 사용)
+        String mime = feignRes.headers().getOrDefault("Content-Type", List.of(defaultMime))
+                .stream().findFirst().orElse(defaultMime);
+        if (mime == null || !mime.startsWith("image/")) mime = defaultMime != null ? defaultMime : "image/jpeg";
+
+        try (var in = feignRes.body().asInputStream()) {
+            byte[] bytes = in.readAllBytes();
+            String b64 = Base64.getEncoder().encodeToString(bytes);
+            return "data:" + mime + ";base64," + b64; // ★ data URL 완성
+        }
     }
 
 //    private byte[] readBytes(String url) {
